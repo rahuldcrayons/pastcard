@@ -1,0 +1,69 @@
+{
+    "hostname": "hps2.lhr.stackcp.net",
+    "date": "2025-05-10 16:14:16",
+    "key": "e36889204438706b6860fbabb3669a5aed3043a9",
+    "virtual_host_id": 2304921,
+    "databases": [
+        {
+            "MySqlGrantId": 6509443,
+            "VirtualHostId": 2304921,
+            "MySqlDatabaseId": 4149407,
+            "MySqlUserId": 6158117,
+            "Privileges": [
+                "SELECT",
+                "INSERT",
+                "UPDATE",
+                "DELETE",
+                "CREATE",
+                "DROP",
+                "INDEX",
+                "ALTER",
+                "LOCK TABLES",
+                "EXECUTE",
+                "CREATE VIEW",
+                "SHOW VIEW",
+                "CREATE ROUTINE",
+                "ALTER ROUTINE",
+                "CREATE TEMPORARY TABLES"
+            ],
+            "Owner": "20ihostingprovision",
+            "Comments": null,
+            "DatabaseName": "pastcart-35303733c60a",
+            "FloatingName": "sdb-76.hosting.stackcp.net",
+            "Username": "pastcart-35303733c60a",
+            "Password": "*417D6B248B85BF6A8C880A89F3C6DDDC23DB62D5",
+            "MySQLGrant": "GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, INDEX, ALTER, LOCK TABLES, EXECUTE, CREATE VIEW, SHOW VIEW, CREATE ROUTINE, ALTER ROUTINE, CREATE TEMPORARY TABLES ON `pastcart-35303733c60a`.* TO 'pastcart-35303733c60a'@'%' IDENTIFIED BY PASSWORD '*417D6B248B85BF6A8C880A89F3C6DDDC23DB62D5';"
+        },
+        {
+            "MySqlGrantId": 6778693,
+            "VirtualHostId": 2304921,
+            "MySqlDatabaseId": 4252053,
+            "MySqlUserId": 6419225,
+            "Privileges": [
+                "SELECT",
+                "INSERT",
+                "UPDATE",
+                "DELETE",
+                "CREATE",
+                "DROP",
+                "INDEX",
+                "ALTER",
+                "LOCK TABLES",
+                "EXECUTE",
+                "CREATE VIEW",
+                "SHOW VIEW",
+                "CREATE ROUTINE",
+                "ALTER ROUTINE",
+                "CREATE TEMPORARY TABLES"
+            ],
+            "Owner": "20ihostingprovision",
+            "Comments": null,
+            "DatabaseName": "PASTCARTCODE-353037312456",
+            "FloatingName": "sdb-75.hosting.stackcp.net",
+            "Username": "PASTCARTCODE-353037312456",
+            "Password": "*3D3195FD61BAC6F7E924709BEDA57724C2FED254",
+            "MySQLGrant": "GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, INDEX, ALTER, LOCK TABLES, EXECUTE, CREATE VIEW, SHOW VIEW, CREATE ROUTINE, ALTER ROUTINE, CREATE TEMPORARY TABLES ON `PASTCARTCODE-353037312456`.* TO 'PASTCARTCODE-353037312456'@'%' IDENTIFIED BY PASSWORD '*3D3195FD61BAC6F7E924709BEDA57724C2FED254';"
+        }
+    ],
+    "v": 2
+}

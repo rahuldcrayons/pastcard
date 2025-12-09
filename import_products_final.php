@@ -1,0 +1,316 @@
+<?php
+require 'vendor/autoload.php';
+$app = require 'bootstrap/app.php';
+$app->make('Illuminate\\Contracts\\Console\\Kernel')->bootstrap();
+
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+
+echo "=== FINAL PRODUCTS IMPORT ===\n\n";
+
+// Clear products first
+echo "🧹 Clearing existing products...\n";
+DB::statement('SET FOREIGN_KEY_CHECKS=0');
+DB::table('products')->truncate();
+DB::table('product_stocks')->truncate();
+DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+echo "📥 Reading CSV file...\n";
+
+// Read CSV with proper handling for multiline fields
+$csvFile = 'product.csv';
+if (!file_exists($csvFile)) {
+    die("❌ product.csv not found!\n");
+}
+
+// Use PHP's built-in CSV parsing which handles quoted multiline fields
+$rows = [];
+if (($handle = fopen($csvFile, 'r')) !== false) {
+    $header = fgetcsv($handle, 0, ',', '"', '\\');
+    
+    // Map column indices
+    $columns = [];
+    foreach ($header as $i => $col) {
+        $columns[trim($col)] = $i;
+    }
+    
+    echo "Found columns: " . count($header) . "\n";
+    echo "Sample columns: " . implode(', ', array_slice(array_keys($columns), 0, 10)) . "...\n\n";
+    
+    $imported = 0;
+    $errors = 0;
+    $rowNum = 0;
+    
+    while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
+        $rowNum++;
+        
+        if ($rowNum % 1000 == 0) {
+            echo "Processing row {$rowNum}... ({$imported} imported)\n";
+        }
+        
+        try {
+            // Get product name
+            $name = isset($columns['post_title']) && isset($row[$columns['post_title']]) ? 
+                    trim($row[$columns['post_title']]) : '';
+            
+            if (empty($name)) {
+                continue;
+            }
+            
+            // Get or generate SKU
+            $sku = isset($columns['sku']) && isset($row[$columns['sku']]) ? 
+                   trim($row[$columns['sku']]) : '';
+            
+            if (empty($sku)) {
+                $sku = 'PROD-' . $rowNum . '-' . time();
+            }
+            
+            // Skip if product exists
+            if (App\Models\Product::where('sku', $sku)->exists()) {
+                continue;
+            }
+            
+            $product = new App\Models\Product();
+            
+            // Basic info
+            $product->sku = $sku;
+            $product->name = $name;
+            $product->slug = isset($columns['post_name']) && isset($row[$columns['post_name']]) ? 
+                            $row[$columns['post_name']] : Str::slug($name);
+            
+            // Status
+            $status = isset($columns['post_status']) && isset($row[$columns['post_status']]) ? 
+                     $row[$columns['post_status']] : 'publish';
+            $product->published = ($status == 'publish') ? 1 : 0;
+            
+            // Description
+            $product->description = isset($columns['post_content']) && isset($row[$columns['post_content']]) ? 
+                                   strip_tags($row[$columns['post_content']]) : '';
+            if (empty($product->description) && isset($columns['post_excerpt'])) {
+                $product->description = isset($row[$columns['post_excerpt']]) ? 
+                                       strip_tags($row[$columns['post_excerpt']]) : '';
+            }
+            $product->meta_description = Str::limit($product->description, 160);
+            
+            // Prices
+            $regularPrice = isset($columns['regular_price']) && isset($row[$columns['regular_price']]) ? 
+                           $row[$columns['regular_price']] : '0';
+            $salePrice = isset($columns['sale_price']) && isset($row[$columns['sale_price']]) ? 
+                        $row[$columns['sale_price']] : '';
+            
+            $product->unit_price = is_numeric($regularPrice) ? floatval($regularPrice) : 0;
+            
+            if (!empty($salePrice) && is_numeric($salePrice) && floatval($salePrice) > 0) {
+                $product->purchase_price = floatval($salePrice);
+                if ($product->purchase_price < $product->unit_price) {
+                    $product->discount = $product->unit_price - $product->purchase_price;
+                    $product->discount_type = 'amount';
+                } else {
+                    $product->discount = 0;
+                }
+            } else {
+                $product->purchase_price = $product->unit_price;
+                $product->discount = 0;
+            }
+            
+            // Stock
+            $stock = isset($columns['stock']) && isset($row[$columns['stock']]) ? 
+                    $row[$columns['stock']] : '';
+            $stockStatus = isset($columns['stock_status']) && isset($row[$columns['stock_status']]) ? 
+                          $row[$columns['stock_status']] : 'instock';
+            
+            if (is_numeric($stock)) {
+                $product->current_stock = intval($stock);
+            } else {
+                $product->current_stock = ($stockStatus == 'instock') ? 100 : 0;
+            }
+            
+            // Category assignment with smart matching
+            $categoryStr = isset($columns['tax:product_cat']) && isset($row[$columns['tax:product_cat']]) ? 
+                          $row[$columns['tax:product_cat']] : '';
+            
+            $categoryId = null;
+            
+            if (!empty($categoryStr)) {
+                // Try to find exact match
+                $categories = explode('|', $categoryStr);
+                foreach ($categories as $catPath) {
+                    if (strpos($catPath, '>') !== false) {
+                        $parts = array_map('trim', explode('>', $catPath));
+                        $catName = end($parts);
+                    } else {
+                        $catName = trim($catPath);
+                    }
+                    
+                    $category = App\Models\Category::where('name', $catName)
+                        ->orWhere('name', 'LIKE', '%' . $catName . '%')
+                        ->orderBy('level', 'desc')
+                        ->first();
+                    
+                    if ($category) {
+                        $categoryId = $category->id;
+                        break;
+                    }
+                }
+            }
+            
+            // Auto-categorize if no category found
+            if (!$categoryId) {
+                $nameLower = strtolower($name);
+                
+                if (strpos($nameLower, 'comic') !== false) {
+                    $cat = App\Models\Category::where('name', 'LIKE', '%COMIC%')
+                        ->where('parent_id', '>', 0)
+                        ->first();
+                } elseif (strpos($nameLower, 'magazine') !== false) {
+                    $cat = App\Models\Category::where('name', 'LIKE', '%MAGAZINE%')
+                        ->where('parent_id', '>', 0)
+                        ->first();
+                } elseif (strpos($nameLower, 'stamp') !== false || strpos($nameLower, 'postage') !== false) {
+                    $cat = App\Models\Category::where('name', 'LIKE', '%PHILATELY%')
+                        ->first();
+                } elseif (strpos($nameLower, 'paint') !== false || strpos($nameLower, 'art') !== false) {
+                    $cat = App\Models\Category::where('name', 'LIKE', '%ART%')
+                        ->where('parent_id', '>', 0)
+                        ->first();
+                } elseif (strpos($nameLower, 'book') !== false || strpos($nameLower, 'novel') !== false) {
+                    $cat = App\Models\Category::where('name', 'LIKE', '%NOVEL%')
+                        ->orWhere('name', 'LIKE', '%book%')
+                        ->where('parent_id', '>', 0)
+                        ->first();
+                } else {
+                    $cat = App\Models\Category::where('name', 'LIKE', '%RARE%')
+                        ->first();
+                }
+                
+                if ($cat) {
+                    $categoryId = $cat->id;
+                }
+            }
+            
+            $product->category_id = $categoryId ?: 1;
+            
+            // Tags
+            $product->tags = isset($columns['tax:product_tag']) && isset($row[$columns['tax:product_tag']]) ? 
+                            $row[$columns['tax:product_tag']] : '';
+            
+            // Tax
+            $taxStatus = isset($columns['tax_status']) && isset($row[$columns['tax_status']]) ? 
+                        $row[$columns['tax_status']] : 'taxable';
+            $product->tax = ($taxStatus == 'taxable') ? 1 : 0;
+            $product->tax_type = 'percent';
+            
+            // Digital/Virtual
+            $downloadable = isset($columns['downloadable']) && isset($row[$columns['downloadable']]) ? 
+                           $row[$columns['downloadable']] : 'no';
+            $virtual = isset($columns['virtual']) && isset($row[$columns['virtual']]) ? 
+                      $row[$columns['virtual']] : 'no';
+            $product->digital = ($downloadable == 'yes' || $virtual == 'yes') ? 1 : 0;
+            
+            // Images
+            $images = isset($columns['images']) && isset($row[$columns['images']]) ? 
+                     $row[$columns['images']] : '';
+            if ($images) {
+                $imageUrls = array_map('trim', explode(',', $images));
+                $product->thumbnail_img = $imageUrls[0] ?? null;
+                $product->photos = implode(',', array_slice($imageUrls, 0, 5));
+            }
+            
+            // Weight
+            $product->weight = isset($columns['weight']) && isset($row[$columns['weight']]) ? 
+                              floatval($row[$columns['weight']]) : 0;
+            
+            // Required fields
+            $product->user_id = 1;
+            $product->added_by = 'admin';
+            $product->num_of_sale = 0;
+            $product->rating = 0;
+            $product->barcode = $product->sku;
+            $product->refundable = 1;
+            $product->featured = 0;
+            $product->shipping_type = 'flat_rate';
+            $product->shipping_cost = 0;
+            $product->est_shipping_days = 7;
+            $product->min_qty = 1;
+            $product->cash_on_delivery = 1;
+            $product->meta_title = $product->name;
+            
+            $product->save();
+            
+            // Create stock entry
+            if ($product->current_stock > 0) {
+                DB::table('product_stocks')->insert([
+                    'product_id' => $product->id,
+                    'variant' => '',
+                    'sku' => $product->sku,
+                    'price' => $product->unit_price,
+                    'qty' => $product->current_stock,
+                    'image' => null,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            }
+            
+            $imported++;
+            
+            // Show sample imports
+            if ($imported <= 5) {
+                $catName = App\Models\Category::find($product->category_id)->name ?? 'Unknown';
+                echo "✅ Imported: {$product->name} → {$catName}\n";
+            }
+            
+        } catch (\Exception $e) {
+            $errors++;
+            if ($errors <= 10) {
+                echo "❌ Error on row {$rowNum}: " . $e->getMessage() . "\n";
+            }
+        }
+    }
+    
+    fclose($handle);
+    
+    echo "\n✅ IMPORT COMPLETE!\n";
+    echo str_repeat("=", 50) . "\n";
+    echo "Total Rows: {$rowNum}\n";
+    echo "Products Imported: {$imported}\n";
+    echo "Errors: {$errors}\n";
+}
+
+// Verification
+echo "\n📊 FINAL STATS\n";
+echo str_repeat("=", 50) . "\n";
+
+$stats = [
+    'Total Products' => App\Models\Product::count(),
+    'Published' => App\Models\Product::where('published', 1)->count(),
+    'With Stock' => App\Models\Product::where('current_stock', '>', 0)->count(),
+    'In Parent Categories' => App\Models\Product::whereHas('category', fn($q) => $q->where('parent_id', 0))->count(),
+    'In Child Categories' => App\Models\Product::whereHas('category', fn($q) => $q->where('parent_id', '>', 0))->count(),
+];
+
+foreach ($stats as $label => $value) {
+    echo "{$label}: {$value}\n";
+}
+
+// Category distribution
+echo "\n📂 CATEGORY DISTRIBUTION\n";
+$categories = DB::table('products')
+    ->join('categories', 'products.category_id', '=', 'categories.id')
+    ->select('categories.name', 'categories.parent_id', DB::raw('count(products.id) as count'))
+    ->groupBy('categories.id', 'categories.name', 'categories.parent_id')
+    ->orderBy('count', 'desc')
+    ->limit(15)
+    ->get();
+
+foreach ($categories as $cat) {
+    $type = $cat->parent_id == 0 ? ' (Parent)' : ' (Child)';
+    echo "{$cat->name}{$type}: {$cat->count} products\n";
+}
+
+echo "\n✨ Migration completed successfully!\n";
+
+// Clear caches
+Artisan::call('cache:clear');
+Artisan::call('view:clear');
+echo "🧹 Caches cleared\n";
+?>

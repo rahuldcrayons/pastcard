@@ -1,0 +1,53 @@
+/.DS_Store
+Thumbs.db
+/.idea
+/.vscode
+
+# Environment & config
+.env
+.env.backup
+.phpunit.result.cache
+.phpunit.cache
+
+# Dependencies
+/vendor/
+/node_modules/
+/composer.phar
+
+# Laravel storage/build artifacts
+/storage/
+/public/hot
+/public/storage
+/public/wp-content/
+/public/uploads/
+/public/logs/
+/storage/*.key
+/storage/app/public
+/storage/debugbar
+/storage/framework/*
+/storage/logs/*
+/public/build
+/public/mix-manifest.json
+
+# OS / editor logs
+npm-debug.log
+yarn-error.log
+*.log
+
+# Data dumps / large exports
+*.sql
+*.csv
+*.tar.gz
+*.zip
+*.bak
+/database_backups/
+/temp/
+
+# Misc
+/backup/
+/addons/
+/demo1/
+/pastcart.in/
+/_ide_helper.php
+/.bash_profile
+/.user.ini
