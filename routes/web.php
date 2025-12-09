@@ -44,8 +44,12 @@ Route::post('/home/section/home_categories', 'HomeController@load_home_categorie
 Route::post('/home/section/best_sellers', 'HomeController@load_best_sellers_section')->name('home.section.best_sellers');
 
 // User authentication routes
+// Frontend login form (GET) and registration
 Route::get('/users/login', 'HomeController@login')->name('user.login');
+Route::get('/login', 'HomeController@login')->name('login.form');
 Route::get('/users/registration', 'HomeController@registration')->name('user.registration');
+
+// Auth controllers for handling POST submissions
 Route::post('/register', 'Auth\RegisterController@register')->name('register');
 Route::post('/login', 'Auth\LoginController@login')->name('login');
 
