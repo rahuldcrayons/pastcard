@@ -114,13 +114,25 @@ if (!function_exists('filter_products')) {
     }
 }
 
-//cache products based on category
+//cache products based on category (including all descendant categories)
 if (!function_exists('get_cached_products')) {
     function get_cached_products($category_id = null)
     {
         if ($category_id != null) {
-            return Cache::remember('products-category-' . $category_id, 3600, function () use ($category_id) {
-                return Product::where('category_id', $category_id)
+            return Cache::remember('products-category-v2-' . $category_id, 3600, function () use ($category_id) {
+                // Include the selected category and all its children so parent blocks (e.g. ANTIQUE MAGAZINES)
+                // also show products assigned to child categories.
+                $categoryIds = [$category_id];
+                try {
+                    $children = CategoryUtility::children_ids($category_id, false);
+                    if (!empty($children)) {
+                        $categoryIds = array_merge($categoryIds, $children);
+                    }
+                } catch (\Throwable $e) {
+                    // Fallback gracefully if anything goes wrong; just use the given category id.
+                }
+
+                return Product::whereIn('category_id', $categoryIds)
                     ->where('published', 1)
                     ->where('unit_price', '>', 0)
                     ->orderBy('id', 'desc')
@@ -128,7 +140,7 @@ if (!function_exists('get_cached_products')) {
                     ->get();
             });
         } else {
-            return Cache::remember('products-all', 3600, function () {
+            return Cache::remember('products-all-v2', 3600, function () {
                 return Product::where('published', 1)
                     ->where('unit_price', '>', 0)
                     ->orderBy('id', 'desc')
@@ -701,8 +713,59 @@ if (!function_exists('getFileBaseURL')) {
         if (env('FILESYSTEM_DRIVER') == 's3') {
             return env('AWS_URL') . '/';
         } else {
+            // Match my_asset(): in local (php artisan serve) the document root is already
+            // /public, so adding another /public prefix would break URLs like
+            // /public/uploads/all/... (they would become /public/public/uploads/all/...).
+            if (env('APP_ENV') === 'local') {
+                $base = app('url')->asset('', null); // e.g. http://127.0.0.1:8000
+                return rtrim($base, '/') . '/';
+            }
+
             return getBaseURL() . 'public/';
         }
+    }
+}
+
+
+if (!function_exists('localize_internal_url')) {
+    function localize_internal_url($url)
+    {
+        if (empty($url)) {
+            return '#';
+        }
+
+        // If URL is not absolute (no scheme), return as-is
+        if (!preg_match('#^https?://#i', $url)) {
+            return $url;
+        }
+
+        $parsed = parse_url($url);
+        if ($parsed === false) {
+            return $url;
+        }
+
+        $host = isset($parsed['host']) ? strtolower($parsed['host']) : '';
+
+        // Known internal domains for PastCart/PastCard
+        $internalHosts = [
+            'pastcard.shop',
+            'www.pastcard.shop',
+            'pastcart.shop',
+            'www.pastcart.shop',
+        ];
+
+        // Leave truly external links untouched
+        if (!in_array($host, $internalHosts, true)) {
+            return $url;
+        }
+
+        $path = isset($parsed['path']) ? $parsed['path'] : '/';
+        $query = isset($parsed['query']) ? '?' . $parsed['query'] : '';
+        $fragment = isset($parsed['fragment']) ? '#' . $parsed['fragment'] : '';
+
+        $base = request()->getSchemeAndHttpHost();
+
+        return $base . $path . $query . $fragment;
     }
 }
 

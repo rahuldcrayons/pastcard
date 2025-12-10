@@ -244,6 +244,7 @@
         @include('frontend.inc.nav')
         @yield('content')
         @include('frontend.inc.footer')
+        <a id="scroll-top"></a>
     </div>
 
     @if (get_setting('show_cookies_agreement') == 'on')
@@ -698,23 +699,22 @@
                 $('.c-preloader').hide();
             });
         }
-    </script>
-            // Scroll to top functionality
-            $(window).scroll(function () {
-                if ($(this).scrollTop() > 100) {
-                    $('#scroll-top').fadeIn();
-                } else {
-                    $('#scroll-top').fadeOut();
-                }
-            });
 
-            $('#scroll-top').click(function () {
-                $("html, body").animate({
-                    scrollTop: 0
-                }, 100);
-                return false;
-            });
-        }); // End of document ready
+        // Scroll to top functionality
+        $(window).scroll(function () {
+            if ($(this).scrollTop() > 100) {
+                $('#scroll-top').fadeIn();
+            } else {
+                $('#scroll-top').fadeOut();
+            }
+        });
+
+        $('#scroll-top').click(function () {
+            $("html, body").animate({
+                scrollTop: 0
+            }, 100);
+            return false;
+        });
     </script>
 
     @yield('script')

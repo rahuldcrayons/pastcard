@@ -68,7 +68,7 @@
                                         <div class="form-group">
                                             <input type="password" class="form-control" placeholder="{{  translate('Confirm Password') }}" name="password_confirmation">
                                         </div>
-                                        @if(get_setting('google_recaptcha') == 1)
+                                        @if(get_setting('google_recaptcha') == 1 && config('app.env') == 'production')
                                             <div class="form-group">
                                                 <div class="g-recaptcha" data-sitekey="{{ $key }}"></div>
                                             </div>
@@ -131,13 +131,13 @@
 
 
 @section('script')
-    @if(get_setting('google_recaptcha') == 1)
+    @if(get_setting('google_recaptcha') == 1 && config('app.env') == 'production')
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     @endif
 
     <script type="text/javascript">
 
-        @if(get_setting('google_recaptcha') == 1)
+        @if(get_setting('google_recaptcha') == 1 && config('app.env') == 'production')
         // making the CAPTCHA  a required field for form submission
         $(document).ready(function(){
             // alert('helloman');

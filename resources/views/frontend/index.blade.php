@@ -41,7 +41,18 @@
                         </div>
                         <div class="block-content" data-owl="owl-slider">
                             <div class="owl-carousel popular-owl-carousel owl-theme">
-                                @foreach (\App\Models\Category::where('level', 0)->orderBy('order_level', 'desc')->get() as $key => $category)
+                                @php
+                                    $popularRootCategories = \App\Models\Category::where('level', 0)->get()
+                                        ->map(function ($category) {
+                                            $category->product_count = category_product_count($category->id);
+                                            return $category;
+                                        })
+                                        ->filter(function ($category) {
+                                            return $category->product_count > 0;
+                                        })
+                                        ->sortByDesc('product_count');
+                                @endphp
+                                @foreach ($popularRootCategories as $key => $category)
                                 <div class="item">
                                     <div class="content-box">
                                         <div class="image-cat">
@@ -71,46 +82,79 @@
         </div>
 
         {{-- Banner section 1 --}}
-        @if(get_setting('home_banner1_images') != null)
+        @php
+            $banner_1_imags = json_decode(get_setting('home_banner1_images'));
+            $banner_1_link = json_decode(get_setting('home_banner1_links'), true);
+            $banner_1_imags = is_array($banner_1_imags) ? $banner_1_imags : [];
+            $banner_1_link = is_array($banner_1_link) ? $banner_1_link : [];
+
+            $banner1_img0_id = $banner_1_imags[0] ?? null;
+            $banner1_img1_id = $banner_1_imags[1] ?? null;
+            $banner1_img2_id = $banner_1_imags[2] ?? null;
+            $banner1_img3_id = $banner_1_imags[3] ?? null;
+            $banner1_img4_id = $banner_1_imags[4] ?? null;
+
+            $banner1_img0 = $banner1_img0_id ? uploaded_asset($banner1_img0_id) : null;
+            $banner1_img1 = $banner1_img1_id ? uploaded_asset($banner1_img1_id) : null;
+            $banner1_img2 = $banner1_img2_id ? uploaded_asset($banner1_img2_id) : null;
+            $banner1_img3 = $banner1_img3_id ? uploaded_asset($banner1_img3_id) : null;
+            $banner1_img4 = $banner1_img4_id ? uploaded_asset($banner1_img4_id) : null;
+
+            $hasAnyBanner1 = !empty($banner_1_imags);
+        @endphp
+        @if($hasAnyBanner1)
         <div class="block-home product-slider-deal bg-white">
             <div class="container">
                 <div class="row">
-                    @php
-                        $banner_1_imags = json_decode(get_setting('home_banner1_images'));
-                        $banner_1_link = json_decode(get_setting('home_banner1_links'), true);
-                        $home_banner1_length = count($banner_1_imags);
-                    @endphp
+                    @if(isset($banner_1_imags[0]))
                     <div class="col-sm-4">
                         <div class="banner-image effect-1">
-                            @if($home_banner1_length > 0)
-                            <a href="{{ $banner_1_link[0] }}"><img src="{{ static_asset('assets/img/placeholder-rect.jpg') }}" data-src="{{ uploaded_asset($banner_1_imags[0]) }}" alt="{{ env('APP_NAME') }}" class="img-fluid lazyload w-100"/></a>
-                            @endif
+                            <a href="{{ $banner_1_link[0] ?? '#' }}">
+                                <img src="{{ static_asset('assets/img/placeholder-rect.jpg') }}" @if($banner1_img0) data-src="{{ $banner1_img0 }}" @endif alt="{{ env('APP_NAME') }}" class="img-fluid lazyload w-100"/>
+                            </a>
                         </div>
                     </div>
+                    @endif
+
+                    @if(isset($banner_1_imags[1]) || isset($banner_1_imags[2]))
                     <div class="col-sm-4">
+                        @if(isset($banner_1_imags[1]))
                         <div class="banner-image effect-1">
-                            @if($home_banner1_length > 1)
-                            <a href="{{ $banner_1_link[1] }}"><img src="{{ static_asset('assets/img/placeholder-rect.jpg') }}" data-src="{{ uploaded_asset($banner_1_imags[1]) }}" alt="{{ env('APP_NAME') }}" class="img-fluid lazyload w-100"/></a>
-                            @endif
+                            <a href="{{ $banner_1_link[1] ?? '#' }}">
+                                <img src="{{ static_asset('assets/img/placeholder-rect.jpg') }}" @if($banner1_img1) data-src="{{ $banner1_img1 }}" @endif alt="{{ env('APP_NAME') }}" class="img-fluid lazyload w-100"/>
+                            </a>
                         </div>
+                        @endif
+
+                        @if(isset($banner_1_imags[2]))
                         <div class="banner-image effect-1">
-                            @if($home_banner1_length > 2)
-                            <a href="{{ $banner_1_link[2] }}"><img src="{{ static_asset('assets/img/placeholder-rect.jpg') }}" data-src="{{ uploaded_asset($banner_1_imags[2]) }}" alt="{{ env('APP_NAME') }}" class="img-fluid lazyload w-100"/></a>
-                            @endif
+                            <a href="{{ $banner_1_link[2] ?? '#' }}">
+                                <img src="{{ static_asset('assets/img/placeholder-rect.jpg') }}" @if($banner1_img2) data-src="{{ $banner1_img2 }}" @endif alt="{{ env('APP_NAME') }}" class="img-fluid lazyload w-100"/>
+                            </a>
                         </div>
+                        @endif
                     </div>
+                    @endif
+
+                    @if(isset($banner_1_imags[3]) || isset($banner_1_imags[4]))
                     <div class="col-sm-4">
+                        @if(isset($banner_1_imags[3]))
                         <div class="banner-image effect-1">
-                            @if($home_banner1_length > 3)
-                            <a href="{{ $banner_1_link[3] }}"><img src="{{ static_asset('assets/img/placeholder-rect.jpg') }}" data-src="{{ uploaded_asset($banner_1_imags[3]) }}" alt="{{ env('APP_NAME') }}" class="img-fluid lazyload w-100"/></a>
-                            @endif
+                            <a href="{{ $banner_1_link[3] ?? '#' }}">
+                                <img src="{{ static_asset('assets/img/placeholder-rect.jpg') }}" @if($banner1_img3) data-src="{{ $banner1_img3 }}" @endif alt="{{ env('APP_NAME') }}" class="img-fluid lazyload w-100"/>
+                            </a>
                         </div>
+                        @endif
+
+                        @if(isset($banner_1_imags[4]))
                         <div class="banner-image effect-1">
-                            @if($home_banner1_length > 4)
-                            <a href="{{ $banner_1_link[4] }}"><img src="{{ static_asset('assets/img/placeholder-rect.jpg') }}" data-src="{{ uploaded_asset($banner_1_imags[4]) }}" alt="{{ env('APP_NAME') }}" class="img-fluid lazyload w-100"/></a>
-                            @endif
+                            <a href="{{ $banner_1_link[4] ?? '#' }}">
+                                <img src="{{ static_asset('assets/img/placeholder-rect.jpg') }}" @if($banner1_img4) data-src="{{ $banner1_img4 }}" @endif alt="{{ env('APP_NAME') }}" class="img-fluid lazyload w-100"/>
+                            </a>
                         </div>
+                        @endif
                     </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -460,7 +504,19 @@
     <section class="mb-4">
         <div class="container">
             <div class="row gutters-10">
-                @if (get_setting('top10_categories') != null)
+                @php
+                    $top10CategoriesValue = get_setting('top10_categories');
+                    $top10CategoryIds = $top10CategoriesValue ? json_decode($top10CategoriesValue, true) : [];
+                    $top10CategoryIds = is_array($top10CategoryIds) ? $top10CategoryIds : [];
+
+                    if (!empty($top10CategoryIds)) {
+                        $top10Categories = \App\Models\Category::whereIn('id', $top10CategoryIds)->get();
+                    } else {
+                        $top10Categories = \App\Models\Category::inRandomOrder()->take(10)->get();
+                    }
+                @endphp
+
+                @if ($top10Categories->count() > 0)
                     <div class="col-lg-12">
                         <div class="d-flex pb-2 mb-3 align-items-center border-bottom justify-content-between">
                             <h3 class="fw-700 mb-0">
@@ -469,32 +525,28 @@
                             <a href="{{ route('categories.all') }}" class="btn btn-primary btn-sm shadow-md">{{ translate('View All Categories') }}</a>
                         </div>
                         <div class="row row-cols-lg-5 row-cols-md-5 row-cols-sm-2 gutters-5 top10">
-                            @php $top10_categories = json_decode(get_setting('top10_categories')); @endphp
-                            @foreach ($top10_categories as $key => $value)
-                                @php $category = \App\Models\Category::find($value); @endphp
-                                @if ($category != null)
-                                    <div class="col col-md-3">
-                                        <a href="{{ route('products.category', $category->slug) }}" class="bg-white border d-block text-reset rounded p-2 hov-shadow-md mb-2">
-                                            <div class="row align-items-center">
-                                                <div class="col-4 text-center">
-                                                    <img
-                                                        src="{{ static_asset('assets/img/placeholder.jpg') }}"
-                                                        data-src="{{ uploaded_asset($category->banner) }}"
-                                                        alt="{{ $category->getTranslation('name') }}"
-                                                        class="img-fluid img lazyload h-60px"
-                                                        onerror="this.onerror=null;this.src='{{ static_asset('assets/img/placeholder.jpg') }}';"
-                                                    >
-                                                </div>
-                                                <div class="col-6">
-                                                    <div class="text-truncat-2 pl-3 fs-24 fw-600 text-left">{{ $category->getTranslation('name') }}</div>
-                                                </div>
-                                                <div class="col-2 text-center">
-                                                    <i class="la la-angle-right text-primary"></i>
-                                                </div>
+                            @foreach ($top10Categories as $category)
+                                <div class="col col-md-3">
+                                    <a href="{{ route('products.category', $category->slug) }}" class="bg-white border d-block text-reset rounded p-2 hov-shadow-md mb-2">
+                                        <div class="row align-items-center">
+                                            <div class="col-4 text-center">
+                                                <img
+                                                    src="{{ static_asset('assets/img/placeholder.jpg') }}"
+                                                    data-src="{{ uploaded_asset($category->banner) }}"
+                                                    alt="{{ $category->getTranslation('name') }}"
+                                                    class="img-fluid img lazyload h-60px"
+                                                    onerror="this.onerror=null;this.src='{{ static_asset('assets/img/placeholder.jpg') }}';"
+                                                >
                                             </div>
-                                        </a>
-                                    </div>
-                                @endif
+                                            <div class="col-6">
+                                                <div class="text-truncat-2 pl-3 fs-24 fw-600 text-left">{{ $category->getTranslation('name') }}</div>
+                                            </div>
+                                            <div class="col-2 text-center">
+                                                <i class="la la-angle-right text-primary"></i>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
                             @endforeach
                         </div>
                     </div>
@@ -595,8 +647,6 @@
             </div>
         </div>
     </div>
-
-    <a id="scroll-top"></a>
 
 @endsection
 

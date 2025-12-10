@@ -50,32 +50,49 @@
                      <div class="departments-text">All Categories</div>
                      <div class="departments-arrow"><i class="klbth-icon-nav-arrow-down"></i></div>
                   </a>
-                    <ul id="menu-sidebar-menu" class="menu departments-menu collapse" style="">
-                        @foreach (\App\Models\Category::where('level', 0)->orderBy('order_level', 'desc')->get() as $key => $category)
-                        @php
-                            $categoryProductCount = category_product_count($category->id);
-                        @endphp
-                        <li id="menu-item-2121" class="menu-item menu-item-type-taxonomy menu-item-object-product_cat  menu-item-2121">
-                            <a href="{{ route('products.category', $category->slug) }}">{{ $category->getTranslation('name') }} <span class="product-count">({{ $categoryProductCount }})</span></a>
-                            @if($category->childrenCategories && count($category->childrenCategories) > 0)
-                            <ul class="sub-menu">
-                            <li class="menu-header"><a class="back" href="#">{{ $category->getTranslation('name') }}</a></li>
-                                @foreach ($category->childrenCategories as $childCategory)
-                                @php
-                                    $childCategoryProductCount = category_product_count($childCategory->id);
-                                @endphp
-                                    <li id="menu-item-2129" class="menu-item menu-item-type-taxonomy menu-item-object-product_cat menu-item-2129">
-                                        <a href="{{ route('products.category', $childCategory->slug) }}">
-                                        {{ $childCategory->getTranslation('name') }} <span class="product-count">({{ $childCategoryProductCount }})</span>
-                                        </a>
-                                    </li>
-                                @endforeach
-                            </ul>
-                            @endif
-                            
-                            <a class="next" href="#"></a>
-                        </li>
-                        @endforeach
+                  <ul id="menu-sidebar-menu" class="menu departments-menu collapse" style="">
+                     @php
+                     $offcanvasRootCategories = \App\Models\Category::where('level', 0)->get()->map(function ($category) {
+                     $category->product_count = category_product_count($category->id);
+                     return $category;
+                     })->filter(function ($category) {
+                     return $category->product_count > 0;
+                     })->sortByDesc('product_count');
+                     @endphp
+                     @foreach ($offcanvasRootCategories as $key => $category)
+                     @php
+                     $categoryProductCount = $category->product_count;
+                     @endphp
+                     <li id="menu-item-2121" class="menu-item menu-item-type-taxonomy menu-item-object-product_cat  menu-item-2121">
+                     <a href="{{ route('products.category', $category->slug) }}">{{ $category->getTranslation('name') }} <span class="product-count">({{ $categoryProductCount }})</span></a>
+                     @if($category->childrenCategories && count($category->childrenCategories) > 0)
+                     <ul class="sub-menu">
+                     <li class="menu-header"><a class="back" href="#">{{ $category->getTranslation('name') }}</a></li>
+                     @php
+                     $offcanvasChildCategories = collect($category->childrenCategories)->map(function ($childCategory) {
+                     $childCategory->product_count = category_product_count($childCategory->id);
+                     return $childCategory;
+                     })->filter(function ($childCategory) {
+                     return $childCategory->product_count > 0;
+                     })->sortByDesc('product_count');
+                     @endphp
+                     @foreach ($offcanvasChildCategories as $childCategory)
+                     @php
+                     $childCategoryProductCount = $childCategory->product_count;
+                     @endphp
+                     <li id="menu-item-2129" class="menu-item menu-item-type-taxonomy menu-item-object-product_cat menu-item-2129">
+                     <a href="{{ route('products.category', $childCategory->slug) }}">
+                     {{ $childCategory->getTranslation('name') }} <span class="product-count">({{ $childCategoryProductCount }})</span>
+                     </a>
+                     </li>
+                     @endforeach
+                     </ul>
+                     @endif
+                     
+                     <a class="next" href="#"></a>
+                     </li>
+                     @endforeach
+                  </ul>
                     </ul>
                   
                </nav>
@@ -85,7 +102,7 @@
                         @if(get_setting('header_menu_labels') && json_decode(get_setting('header_menu_labels'), true))
                             @foreach (json_decode( get_setting('header_menu_labels'), true) as $key => $value)
                                 <li class="menu-item menu-item-type-custom menu-item-object-custom current-menu-item current_page_item menu-item-home current-menu-ancestor current-menu-parent menu-item-has-children">
-                                    <a href="{{ json_decode( get_setting('header_menu_links'), true)[$key] }}">{{ translate($value) }}</a>
+                                    <a href="{{ localize_internal_url(json_decode( get_setting('header_menu_links'), true)[$key]) }}">{{ translate($value) }}</a>
                                 </li>
                             @endforeach
                         @endif
@@ -304,16 +321,30 @@
                                  <div class="mega-content">
                                     <ul class="vertical-type sm-megamenu-hover sm_megamenu_menu sm_megamenu_menu_black">
                                        <li class="other-toggle sm_megamenu_lv1 sm_megamenu_drop parent">
-                                          <a class="sm_megamenu_head sm_megamenu_drop" href="{{ route('categories.all') }}" id="sm_megamenu_0">
+                                          <a class="sm_megamenu_head sm_megamenu_drop" href="javascript:void(0)" id="sm_megamenu_0">
                                           <span class="sm_megamenu_icon sm_megamenu_nodesc">
                                           <span class="sm_megamenu_title">All Categories</span>
                                           </span>
                                           </a>
                                        </li>
-                                       @foreach (\App\Models\Category::where('level', 0)->orderBy('order_level', 'desc')->get() as $key => $category)
                                        @php
-                                           $firstLevelChildren = \App\Utility\CategoryUtility::get_immediate_children($category->id);
-                                           $parentProductCount = category_product_count($category->id);
+                                           $headerRootCategories = \App\Models\Category::where('level', 0)->get()->map(function ($category) {
+                                               $category->product_count = category_product_count($category->id);
+                                               return $category;
+                                           })->filter(function ($category) {
+                                               return $category->product_count > 0;
+                                           })->sortByDesc('product_count');
+                                       @endphp
+                                       @foreach ($headerRootCategories as $key => $category)
+                                       @php
+                                           $firstLevelChildren = collect(\App\Utility\CategoryUtility::get_immediate_children($category->id));
+                                           $parentProductCount = $category->product_count;
+                                           $firstLevelChildren = $firstLevelChildren->map(function ($childCategory) {
+                                               $childCategory->product_count = category_product_count($childCategory->id);
+                                               return $childCategory;
+                                           })->filter(function ($childCategory) {
+                                               return $childCategory->product_count > 0;
+                                           })->sortByDesc('product_count');
                                        @endphp
                                        <li class="other-toggle sm_megamenu_lv1 sm_megamenu_drop parent @if($firstLevelChildren->count() > 0) parent-item @endif">
                                           <a class="sm_megamenu_head sm_megamenu_drop @if($firstLevelChildren->count() > 0)sm_megamenu_haschild @endif" href="{{ route('products.category', $category->slug) }}" id="sm_megamenu_{{ $category->id }}">
@@ -329,8 +360,13 @@
                                                       <div class="sm_megamenu_title">
                                                          @foreach ($firstLevelChildren as $childCategory)
                                                          @php
-                                                             $secondLevelChildren = \App\Utility\CategoryUtility::get_immediate_children($childCategory->id);
-                                                             $childProductCount = category_product_count($childCategory->id);
+                                                             $secondLevelChildren = collect(\App\Utility\CategoryUtility::get_immediate_children($childCategory->id))->map(function ($subChildCategory) {
+                                                                 $subChildCategory->product_count = category_product_count($subChildCategory->id);
+                                                                 return $subChildCategory;
+                                                             })->filter(function ($subChildCategory) {
+                                                                 return $subChildCategory->product_count > 0;
+                                                             })->sortByDesc('product_count');
+                                                             $childProductCount = $childCategory->product_count;
                                                          @endphp
                                                          <div class="sm_megamenu_col_6 sm_megamenu_firstcolumn">
                                                             <div class="sm_megamenu_head_item">
@@ -341,7 +377,7 @@
                                                                   @if($secondLevelChildren->count() > 0)
                                                                   @foreach ($secondLevelChildren as $subChildCategory)
                                                                   @php
-                                                                      $subChildProductCount = category_product_count($subChildCategory->id);
+                                                                      $subChildProductCount = $subChildCategory->product_count;
                                                                   @endphp
                                                                   <div class="sm_megamenu_title">
                                                                      <a class="sm_megamenu_nodrop" href="{{ route('products.category', $subChildCategory->slug) }}">
@@ -557,14 +593,22 @@
                            <div class="sambar-inner">
                               <div class="mega-content">
                                  <ul class="horizontal-type  sm_megamenu_menu sm_megamenu_menu_black">
-                                    @foreach (json_decode( get_setting('header_menu_labels'), true) as $key => $value)
-                                    <li class="{{ translate($value) }}-item other-toggle sm_megamenu_lv1 sm_megamenu_drop">
-                                       <a class="sm_megamenu_head sm_megamenu_drop" href="{{ json_decode( get_setting('header_menu_links'), true)[$key] }}">
-                                       <span class="sm_megamenu_icon sm_megamenu_nodesc">
-                                       <span class="sm_megamenu_title">{{ translate($value) }}</span>
-                                       </span>
-                                       </a>
-                                    </li>
+                                    @php
+                                       $headerMenuLabels = json_decode(get_setting('header_menu_labels'), true) ?: [];
+                                       $headerMenuLinks  = json_decode(get_setting('header_menu_links'), true) ?: [];
+                                    @endphp
+                                    @foreach ($headerMenuLabels as $key => $value)
+                                        @php
+                                            $rawLink = $headerMenuLinks[$key] ?? '#';
+                                            $safeLink = localize_internal_url($rawLink);
+                                        @endphp
+                                        <li class="{{ translate($value) }}-item other-toggle sm_megamenu_lv1 sm_megamenu_drop">
+                                           <a class="sm_megamenu_head sm_megamenu_drop" href="{{ $safeLink }}">
+                                           <span class="sm_megamenu_icon sm_megamenu_nodesc">
+                                           <span class="sm_megamenu_title">{{ translate($value) }}</span>
+                                           </span>
+                                           </a>
+                                        </li>
                                     @endforeach
                                  </ul>
                               </div>

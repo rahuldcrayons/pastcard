@@ -90,12 +90,20 @@ Route::get('/compare', 'CompareController@index')->name('compare');
 Route::post('/compare/add', 'CompareController@addToCompare')->name('compare.addToCompare');
 Route::post('/compare/remove', 'CompareController@removeFromCompare')->name('compare.removeFromCompare');
 
-// Address management routes (auth required)
+// Address management routes (auth required) + AIZ uploader endpoints
 Route::middleware('auth')->group(function () {
+    // Addresses
     Route::post('/addresses', 'AddressController@store')->name('addresses.store');
     Route::get('/addresses/{id}/edit', 'AddressController@edit')->name('addresses.edit');
     Route::put('/addresses/{id}', 'AddressController@update')->name('addresses.update');
     Route::delete('/addresses/{id}', 'AddressController@destroy')->name('addresses.destroy');
+
+    // AIZ uploader (used by admin & seller when clicking Browse/Choose File)
+    Route::post('/aiz-uploader', 'AizUploadController@show_uploader')->name('aiz.uploader');
+    Route::post('/aiz-uploader/upload', 'AizUploadController@upload')->name('aiz.uploader.upload');
+    Route::get('/aiz-uploader/get_uploaded_files', 'AizUploadController@get_uploaded_files')->name('aiz.uploader.get_uploaded_files');
+    Route::post('/aiz-uploader/get_file_by_ids', 'AizUploadController@get_preview_files')->name('aiz.uploader.get_file_by_ids');
+    Route::delete('/aiz-uploader/destroy/{id}', 'AizUploadController@destroy')->name('aiz.uploader.destroy');
 });
 
 // Conversation routes (disabled by default - enable when conversation system is activated)
@@ -133,8 +141,43 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', 'Auth\LoginController@logout')->name('logout');
     
     // Admin dashboard (admin users only)
-    Route::get('/admin/dashboard', 'AdminController@index')->name('admin.dashboard')->middleware('admin');
+    Route::get('/admin/dashboard', 'AdminController@admin_dashboard')->name('admin.dashboard')->middleware('admin');
+
+    // Admin digital products (backend listing & management)
+    Route::prefix('admin')->middleware('admin')->group(function () {
+        Route::get('/digitalproducts', 'DigitalProductController@index')->name('digitalproducts.index');
+        Route::get('/digitalproducts/create', 'DigitalProductController@create')->name('digitalproducts.create');
+        Route::get('/digitalproducts/{id}/edit', 'DigitalProductController@edit')->name('digitalproducts.edit');
+
+        Route::get('/withdraw_requests', 'SellerWithdrawRequestController@request_index')->name('withdraw_requests_all');
+        Route::post('/withdraw_request/payment_modal', 'SellerWithdrawRequestController@payment_modal')->name('withdraw_request.payment_modal');
+    });
+
+    // Shared digital product operations (admin + seller)
+    Route::post('/digitalproducts', 'DigitalProductController@store')->name('digitalproducts.store');
+    Route::patch('/digitalproducts/{id}', 'DigitalProductController@update')->name('digitalproducts.update');
+    Route::delete('/digitalproducts/{id}', 'DigitalProductController@destroy')->name('digitalproducts.destroy');
+    Route::get('/digitalproducts/download/{id}', 'DigitalProductController@download')->name('digitalproducts.download');
+
+    // Seller digital products (seller panel)
+    Route::prefix('seller')->middleware('seller')->group(function () {
+        Route::get('/digitalproducts', 'HomeController@seller_digital_product_list')->name('seller.digitalproducts');
+        Route::get('/digitalproducts/upload', 'HomeController@show_digital_product_upload_form')->name('seller.digitalproducts.upload');
+        Route::get('/digitalproducts/{id}/edit', 'HomeController@show_digital_product_edit_form')->name('seller.digitalproducts.edit');
+    });
     
+    // Product bulk upload & export (admin + seller)
+    Route::get('/product-bulk-upload', 'ProductBulkUploadController@index')->name('product_bulk_upload.index');
+    Route::post('/product-bulk-upload', 'ProductBulkUploadController@bulk_upload')->name('bulk_product_upload');
+    Route::get('/product-bulk-export', 'ProductBulkUploadController@export')->name('product_bulk_export.index');
+    Route::get('/pdf/download_category', 'ProductBulkUploadController@pdf_download_category')->name('pdf.download_category');
+    Route::get('/pdf/download_brand', 'ProductBulkUploadController@pdf_download_brand')->name('pdf.download_brand');
+    Route::get('/pdf/download_seller', 'ProductBulkUploadController@pdf_download_seller')->name('pdf.download_seller');
+    Route::get('/withdraw_requests', 'SellerWithdrawRequestController@index')->name('withdraw_requests.index')->middleware('seller');
+    Route::post('/withdraw_requests/store', 'SellerWithdrawRequestController@store')->name('withdraw_requests.store')->middleware('seller');
+    Route::post('/withdraw_request/message_modal', 'SellerWithdrawRequestController@message_modal')->name('withdraw_request.message_modal');
+    Route::get('/commission-log', 'ReportController@commission_history')->name('commission-log.index');
+
     // Club point routes (if club point addon is active)
     Route::post('/checkout/apply-club-point', 'CheckoutController@apply_club_point')->name('checkout.apply_club_point');
     Route::post('/checkout/remove-club-point', 'CheckoutController@remove_club_point')->name('checkout.remove_club_point');
@@ -166,6 +209,9 @@ Route::get('/about', 'HomeController@about_us')->name('about');
 Route::get('/contact-us', 'HomeController@contact_us')->name('contactus');
 Route::get('/contact', 'HomeController@contact_us')->name('contact');
 Route::get('/faqs', 'HomeController@faqs')->name('faqs');
+
+// Custom CMS pages (frontend)
+Route::get('/page/{slug}', 'PageController@show_custom_page')->name('custom-pages.show_custom_page');
 
 // Additional frontend pages
 Route::get('/be-a-seller', 'HomeController@be_a_seller')->name('beaseller');

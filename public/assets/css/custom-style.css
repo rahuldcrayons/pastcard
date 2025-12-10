@@ -13,10 +13,10 @@
     text-align: center;
     border-radius: 4px;
     position: fixed;
-    bottom: 30px;
+    bottom: 90px;
     right: 30px;
     transition: background-color .3s;
-    z-index: 1;
+    z-index: 10000;
 }
 
 #scroll-top::after {

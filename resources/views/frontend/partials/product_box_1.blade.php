@@ -50,7 +50,7 @@
             </a>
             <a href="javascript:void(0)" onclick="addToCart({{ $product->id }})" data-toggle="tooltip" data-title="{{ translate('Add to cart') }}" data-placement="left">
                 <span class="atcpreloader{{ $product->id }} text-center" style="display: none;"><i class="las la-spinner la-spin"></i></span>
-				<i class="las la-shopping-cart atcicon{{ $product->id }}""></i>
+                <i class="las la-shopping-cart atcicon{{ $product->id }}"></i>
             </a>
         </div> 
     </div>

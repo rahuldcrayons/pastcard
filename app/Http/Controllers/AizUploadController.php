@@ -234,7 +234,36 @@ class AizUploadController extends Controller
                     break;
             }
         }
-        return $uploads->paginate(60)->appends(request()->query());
+
+        $paginated = $uploads->paginate(60)->appends(request()->query());
+
+        // Drop any broken records that don't even have a stored file path, then
+        // ensure metadata is filled so the JS uploader never sees null values
+        // that would render as "null.null" or "NaN undefined" in the UI.
+        $cleaned = $paginated->getCollection()
+            ->filter(function ($upload) {
+                return !empty($upload->file_name);
+            })
+            ->values()
+            ->transform(function ($upload) {
+                if (empty($upload->file_original_name) && !empty($upload->file_name)) {
+                    $upload->file_original_name = pathinfo($upload->file_name, PATHINFO_FILENAME);
+                }
+                if (empty($upload->extension) && !empty($upload->file_name)) {
+                    $upload->extension = pathinfo($upload->file_name, PATHINFO_EXTENSION);
+                }
+                if (empty($upload->file_size) || $upload->file_size <= 0) {
+                    $fullPath = public_path($upload->file_name);
+                    if (file_exists($fullPath)) {
+                        $upload->file_size = filesize($fullPath);
+                    }
+                }
+                return $upload;
+            });
+
+        $paginated->setCollection($cleaned);
+
+        return response()->json($paginated);
     }
 
     public function destroy(Request $request,$id)
@@ -268,6 +297,29 @@ class AizUploadController extends Controller
     public function get_preview_files(Request $request){
         $ids = explode(',', $request->ids);
         $files = Upload::whereIn('id', $ids)->get();
+
+        // Normalize metadata for preview as well so thumbnails and labels are always sane.
+        $files = $files
+            ->filter(function ($upload) {
+                return !empty($upload->file_name);
+            })
+            ->values()
+            ->transform(function ($upload) {
+                if (empty($upload->file_original_name) && !empty($upload->file_name)) {
+                    $upload->file_original_name = pathinfo($upload->file_name, PATHINFO_FILENAME);
+                }
+                if (empty($upload->extension) && !empty($upload->file_name)) {
+                    $upload->extension = pathinfo($upload->file_name, PATHINFO_EXTENSION);
+                }
+                if (empty($upload->file_size) || $upload->file_size <= 0) {
+                    $fullPath = public_path($upload->file_name);
+                    if (file_exists($fullPath)) {
+                        $upload->file_size = filesize($fullPath);
+                    }
+                }
+                return $upload;
+            });
+
         return $files;
     }
 
