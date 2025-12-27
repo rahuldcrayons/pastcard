@@ -29,7 +29,7 @@ Route::get('/customer-products', 'CustomerProductController@customer_products_li
 Route::get('/customer-product/{slug}', 'CustomerProductController@customer_product')->name('customer.product');
 
 // Product related routes
-Route::post('/products/variant-price', 'ProductController@variant_price')->name('products.variant_price');
+Route::post('/products/variant-price', 'HomeController@variant_price')->name('products.variant_price');
 
 // Additional frontend routes
 Route::get('/search', 'SearchController@index')->name('search');

@@ -42,15 +42,17 @@
                         <div class="block-content" data-owl="owl-slider">
                             <div class="owl-carousel popular-owl-carousel owl-theme">
                                 @php
-                                    $popularRootCategories = \App\Models\Category::where('level', 0)->get()
-                                        ->map(function ($category) {
-                                            $category->product_count = category_product_count($category->id);
-                                            return $category;
-                                        })
-                                        ->filter(function ($category) {
-                                            return $category->product_count > 0;
-                                        })
-                                        ->sortByDesc('product_count');
+                                    $popularRootCategories = Cache::remember('popular_root_categories', 3600, function () {
+                                        return \App\Models\Category::where('level', 0)->get()
+                                            ->map(function ($category) {
+                                                $category->product_count = category_product_count($category->id);
+                                                return $category;
+                                            })
+                                            ->filter(function ($category) {
+                                                return $category->product_count > 0;
+                                            })
+                                            ->sortByDesc('product_count');
+                                    });
                                 @endphp
                                 @foreach ($popularRootCategories as $key => $category)
                                 <div class="item">
@@ -191,7 +193,16 @@
 
         {{-- Flash Deal --}}
         @php
-            $flash_deal = \App\Models\FlashDeal::where('status', 1)->where('featured', 1)->first();
+            $flash_deal = Cache::remember('flash_deal_featured', 1800, function () {
+                return \App\Models\FlashDeal::where('status', 1)->where('featured', 1)->first();
+            });
+            $flash_deal_products_cached = [];
+            if ($flash_deal != null) {
+                $flash_deal_products_cached = Cache::remember('flash_deal_products_' . $flash_deal->id, 1800, function () use ($flash_deal) {
+                    $productIds = $flash_deal->flash_deal_products->take(20)->pluck('product_id')->toArray();
+                    return \App\Models\Product::with('stocks')->whereIn('id', $productIds)->where('published', 1)->get();
+                });
+            }
         @endphp
         @if($flash_deal != null && strtotime(date('Y-m-d H:i:s')) >= $flash_deal->start_date && strtotime(date('Y-m-d H:i:s')) <= $flash_deal->end_date)
         <div class="block-home product-slider-deal bg-white">
@@ -216,15 +227,10 @@
                                             <div class="elementor-widget-container">
                                                 <div class="slider-content products">
                                                     <div class="owl-carousel flash-owl-carousel owl-theme list items product-items filterproducts">
-                                                        @foreach ($flash_deal->flash_deal_products->take(20) as $key => $flash_deal_product)
-                                                            @php
-                                                                $product = \App\Models\Product::find($flash_deal_product->product_id);
-                                                            @endphp
-                                                            @if($product != null && $product->published != 0)
+                                                        @foreach ($flash_deal_products_cached as $product)
                                                                 <div class="carousel-box">
                                                                     @include('frontend.partials.product_box_2',['product' => $product])
                                                                 </div>
-                                                            @endif
                                                         @endforeach
                                                     </div>
                                                 </div>
@@ -242,9 +248,15 @@
 
         {{-- Home category Bottom --}}
         @if(get_setting('home_categories_bottom') != null)
-            @php $home_categories_bottom = json_decode(get_setting('home_categories_bottom')); @endphp
+            @php
+                $home_categories_bottom = json_decode(get_setting('home_categories_bottom'));
+                $bottom_categories = Cache::remember('home_bottom_categories', 3600, function () use ($home_categories_bottom) {
+                    return \App\Models\Category::whereIn('id', $home_categories_bottom)->get()->keyBy('id');
+                });
+            @endphp
             @foreach ($home_categories_bottom as $key => $value)
-                @php $category = \App\Models\Category::find($value); @endphp
+                @php $category = $bottom_categories->get($value); @endphp
+                @if($category)
                 <div class="block-home bottom-categories background-gray">
                     <div class="container">
                         <div class="hover-to-show nav-style-2 nav-position-center">
@@ -266,6 +278,7 @@
                         </div>
                     </div>
                 </div>
+                @endif
             @endforeach
         @endif
             <div class="block-home coupon-slider">

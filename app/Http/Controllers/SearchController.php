@@ -14,6 +14,7 @@ use App\Models\Attribute;
 use App\Models\AttributeCategory;
 use App\Models\Seller;
 use App\Utility\CategoryUtility;
+use Illuminate\Support\Facades\Cache;
 
 class SearchController extends Controller
 {
@@ -22,25 +23,29 @@ class SearchController extends Controller
         // Convert slugs to IDs
         $category_id = null;
         $brand_id = null;
-        
+
         if ($category_slug) {
             $category = Category::where('slug', $category_slug)->first();
             $category_id = $category ? $category->id : null;
         }
-        
+
         if ($brand_slug) {
             $brand = Brand::where('slug', $brand_slug)->first();
             $brand_id = $brand ? $brand->id : null;
         }
-        
+
         $query = $request->keyword;
         $sort_by = $request->sort_by;
         $min_price = $request->min_price;
         $max_price = $request->max_price;
         $seller_id = $request->seller_id;
-        $attributes = Attribute::all();
+        $attributes = Cache::remember('all_attributes', 3600, function () {
+            return Attribute::all();
+        });
         $selected_attribute_values = array();
-        $colors = Color::all();
+        $colors = Cache::remember('all_colors', 3600, function () {
+            return Color::all();
+        });
         $selected_color = null;
 
         $conditions = ['published' => 1];
@@ -134,7 +139,7 @@ class SearchController extends Controller
             }
         }
 
-        $products = filter_products($products)->with('taxes')->paginate(52)->appends(request()->query());
+        $products = filter_products($products)->with(['taxes', 'stocks'])->paginate(52)->appends(request()->query());
 		
         return view('frontend.product_listing', compact('products', 'query', 'category_id', 'brand_id', 'sort_by', 'seller_id', 'min_price', 'max_price', 'attributes', 'selected_attribute_values', 'colors', 'selected_color'));
     }

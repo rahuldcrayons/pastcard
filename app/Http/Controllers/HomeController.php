@@ -47,7 +47,7 @@ class HomeController extends Controller
 
         // Cache today's deal products for 1 hour
         $todays_deal_products = Cache::remember('todays_deal_products', 3600, function () {
-            return Product::where('published', 1)
+            return Product::with('stocks')->where('published', 1)
                 ->where('todays_deal', '1')
                 ->where('unit_price', '>', 0)
                 ->limit(20)
@@ -56,7 +56,7 @@ class HomeController extends Controller
 
         // Cache newest products for 30 minutes
         $newest_products = Cache::remember('newest_products', 1800, function () {
-            return Product::whereNotIn('id', [9100])
+            return Product::with('stocks')->whereNotIn('id', [9100])
                 ->where('published', 1)
                 ->where('unit_price', '>', 0)
                 ->orderBy('id', 'desc')

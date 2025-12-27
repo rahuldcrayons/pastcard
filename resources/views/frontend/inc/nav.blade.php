@@ -52,12 +52,14 @@
                   </a>
                   <ul id="menu-sidebar-menu" class="menu departments-menu collapse" style="">
                      @php
-                     $offcanvasRootCategories = \App\Models\Category::where('level', 0)->get()->map(function ($category) {
-                     $category->product_count = category_product_count($category->id);
-                     return $category;
-                     })->filter(function ($category) {
-                     return $category->product_count > 0;
-                     })->sortByDesc('product_count');
+                     $offcanvasRootCategories = Cache::remember('popular_root_categories', 3600, function () {
+                         return \App\Models\Category::where('level', 0)->get()->map(function ($category) {
+                             $category->product_count = category_product_count($category->id);
+                             return $category;
+                         })->filter(function ($category) {
+                             return $category->product_count > 0;
+                         })->sortByDesc('product_count');
+                     });
                      @endphp
                      @foreach ($offcanvasRootCategories as $key => $category)
                      @php
@@ -69,12 +71,14 @@
                      <ul class="sub-menu">
                      <li class="menu-header"><a class="back" href="#">{{ $category->getTranslation('name') }}</a></li>
                      @php
-                     $offcanvasChildCategories = collect($category->childrenCategories)->map(function ($childCategory) {
-                     $childCategory->product_count = category_product_count($childCategory->id);
-                     return $childCategory;
-                     })->filter(function ($childCategory) {
-                     return $childCategory->product_count > 0;
-                     })->sortByDesc('product_count');
+                     $offcanvasChildCategories = Cache::remember('child_categories_' . $category->id, 3600, function () use ($category) {
+                         return collect($category->childrenCategories)->map(function ($childCategory) {
+                             $childCategory->product_count = category_product_count($childCategory->id);
+                             return $childCategory;
+                         })->filter(function ($childCategory) {
+                             return $childCategory->product_count > 0;
+                         })->sortByDesc('product_count');
+                     });
                      @endphp
                      @foreach ($offcanvasChildCategories as $childCategory)
                      @php
@@ -243,7 +247,12 @@
                                     <div class="control">
                                        <select class="cat searchbox-cat" name="category_id">
                                           <option value="">All Categories</option>
-                                          @foreach (\App\Models\Category::where('level', 0)->orderBy('order_level', 'desc')->get() as $key => $category)
+                                          @php
+                                          $searchCategories = Cache::remember('search_dropdown_categories', 3600, function () {
+                                              return \App\Models\Category::where('level', 0)->orderBy('order_level', 'desc')->with('childrenCategories')->get();
+                                          });
+                                          @endphp
+                                          @foreach ($searchCategories as $key => $category)
                                           <option value="{{ $category->id }}">- {{ $category->getTranslation('name') }}</option>
                                           @foreach ($category->childrenCategories as $childCategory)
                                           @include('categories.child_category', ['child_category' => $childCategory])
@@ -328,23 +337,26 @@
                                           </a>
                                        </li>
                                        @php
-                                           $headerRootCategories = \App\Models\Category::where('level', 0)->get()->map(function ($category) {
-                                               $category->product_count = category_product_count($category->id);
-                                               return $category;
-                                           })->filter(function ($category) {
-                                               return $category->product_count > 0;
-                                           })->sortByDesc('product_count');
+                                           $headerRootCategories = Cache::remember('popular_root_categories', 3600, function () {
+                                               return \App\Models\Category::where('level', 0)->get()->map(function ($category) {
+                                                   $category->product_count = category_product_count($category->id);
+                                                   return $category;
+                                               })->filter(function ($category) {
+                                                   return $category->product_count > 0;
+                                               })->sortByDesc('product_count');
+                                           });
                                        @endphp
                                        @foreach ($headerRootCategories as $key => $category)
                                        @php
-                                           $firstLevelChildren = collect(\App\Utility\CategoryUtility::get_immediate_children($category->id));
+                                           $firstLevelChildren = Cache::remember('first_level_children_' . $category->id, 3600, function () use ($category) {
+                                               return collect(\App\Utility\CategoryUtility::get_immediate_children($category->id))->map(function ($childCategory) {
+                                                   $childCategory->product_count = category_product_count($childCategory->id);
+                                                   return $childCategory;
+                                               })->filter(function ($childCategory) {
+                                                   return $childCategory->product_count > 0;
+                                               })->sortByDesc('product_count');
+                                           });
                                            $parentProductCount = $category->product_count;
-                                           $firstLevelChildren = $firstLevelChildren->map(function ($childCategory) {
-                                               $childCategory->product_count = category_product_count($childCategory->id);
-                                               return $childCategory;
-                                           })->filter(function ($childCategory) {
-                                               return $childCategory->product_count > 0;
-                                           })->sortByDesc('product_count');
                                        @endphp
                                        <li class="other-toggle sm_megamenu_lv1 sm_megamenu_drop parent @if($firstLevelChildren->count() > 0) parent-item @endif">
                                           <a class="sm_megamenu_head sm_megamenu_drop @if($firstLevelChildren->count() > 0)sm_megamenu_haschild @endif" href="{{ route('products.category', $category->slug) }}" id="sm_megamenu_{{ $category->id }}">
@@ -360,12 +372,14 @@
                                                       <div class="sm_megamenu_title">
                                                          @foreach ($firstLevelChildren as $childCategory)
                                                          @php
-                                                             $secondLevelChildren = collect(\App\Utility\CategoryUtility::get_immediate_children($childCategory->id))->map(function ($subChildCategory) {
-                                                                 $subChildCategory->product_count = category_product_count($subChildCategory->id);
-                                                                 return $subChildCategory;
-                                                             })->filter(function ($subChildCategory) {
-                                                                 return $subChildCategory->product_count > 0;
-                                                             })->sortByDesc('product_count');
+                                                             $secondLevelChildren = Cache::remember('second_level_children_' . $childCategory->id, 3600, function () use ($childCategory) {
+                                                                 return collect(\App\Utility\CategoryUtility::get_immediate_children($childCategory->id))->map(function ($subChildCategory) {
+                                                                     $subChildCategory->product_count = category_product_count($subChildCategory->id);
+                                                                     return $subChildCategory;
+                                                                 })->filter(function ($subChildCategory) {
+                                                                     return $subChildCategory->product_count > 0;
+                                                                 })->sortByDesc('product_count');
+                                                             });
                                                              $childProductCount = $childCategory->product_count;
                                                          @endphp
                                                          <div class="sm_megamenu_col_6 sm_megamenu_firstcolumn">

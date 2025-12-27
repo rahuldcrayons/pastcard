@@ -132,7 +132,7 @@ if (!function_exists('get_cached_products')) {
                     // Fallback gracefully if anything goes wrong; just use the given category id.
                 }
 
-                return Product::whereIn('category_id', $categoryIds)
+                return Product::with('stocks')->whereIn('category_id', $categoryIds)
                     ->where('published', 1)
                     ->where('unit_price', '>', 0)
                     ->orderBy('id', 'desc')
@@ -141,7 +141,7 @@ if (!function_exists('get_cached_products')) {
             });
         } else {
             return Cache::remember('products-all-v2', 3600, function () {
-                return Product::where('published', 1)
+                return Product::with('stocks')->where('published', 1)
                     ->where('unit_price', '>', 0)
                     ->orderBy('id', 'desc')
                     ->limit(12)
@@ -640,6 +640,25 @@ if (!function_exists('api_asset')) {
 if (!function_exists('uploaded_asset')) {
     function uploaded_asset($id)
     {
+        if (empty($id)) {
+            return null;
+        }
+
+        // Handle WordPress URL format: "url ! alt : ... | url2"
+        // Extract just the first URL if it's a WordPress image string
+        if (is_string($id) && strpos($id, 'http') === 0) {
+            // Extract just the URL part (before any metadata or pipe)
+            $url = $id;
+            if (strpos($url, ' !') !== false) {
+                $url = trim(explode(' !', $url)[0]);
+            }
+            if (strpos($url, '|') !== false) {
+                $url = trim(explode('|', $url)[0]);
+            }
+            return $url;
+        }
+
+        // Handle upload ID
         if (($asset = \App\Models\Upload::find($id)) != null) {
             return $asset->external_link == null ? my_asset($asset->file_name) : $asset->external_link;
         }
