@@ -88,6 +88,19 @@ class HomeController extends Controller
     {
         updatecurrency_convert();
     }
+
+    public function change_currency(Request $request)
+    {
+        $currency_code = $request->currency_code;
+        $currency = \App\Models\Currency::where('code', $currency_code)->first();
+        if ($currency) {
+            session(['currency_code' => $currency_code]);
+            session(['currency_symbol' => $currency->symbol]);
+            session(['currency_exchange_rate' => $currency->exchange_rate]);
+        }
+        return 1;
+    }
+
     public function faqs()
     {
         return view('frontend.faqs');

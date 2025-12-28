@@ -47,6 +47,8 @@
 .product-card img {
   max-height: 250px;
   min-height: 250px;
+  width: 100%;
+  object-fit: contain;
 }
 /*
 Preloader Area Style
