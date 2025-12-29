@@ -84,16 +84,20 @@ function updatecurrency_convert(){
 if (!function_exists('convert_to_usd')) {
     function convert_to_usd($amount)
     {
-        $currency = Currency::find(get_setting('system_default_currency'));
-        return (floatval($amount) / floatval($currency->exchange_rate)) * Currency::where('code', 'USD')->first()->exchange_rate;
+        $currency = get_system_default_currency();
+        $usdCurrency = get_currency_by_code('USD');
+        if (!$usdCurrency) return $amount;
+        return (floatval($amount) / floatval($currency->exchange_rate)) * $usdCurrency->exchange_rate;
     }
 }
 
 if (!function_exists('convert_to_kes')) {
     function convert_to_kes($amount)
     {
-        $currency = Currency::find(get_setting('system_default_currency'));
-        return (floatval($amount) / floatval($currency->exchange_rate)) * Currency::where('code', 'KES')->first()->exchange_rate;
+        $currency = get_system_default_currency();
+        $kesCurrency = get_currency_by_code('KES');
+        if (!$kesCurrency) return $amount;
+        return (floatval($amount) / floatval($currency->exchange_rate)) * $kesCurrency->exchange_rate;
     }
 }
 
@@ -187,6 +191,48 @@ if (!function_exists('get_system_default_currency')) {
         return Cache::remember('system_default_currency', 86400, function () {
             return Currency::findOrFail(get_setting('system_default_currency'));
         });
+    }
+}
+
+// Get all active currencies (cached)
+if (!function_exists('get_all_active_currencies')) {
+    function get_all_active_currencies()
+    {
+        return Cache::remember('active_currencies', 86400, function () {
+            return Currency::where('status', 1)->get();
+        });
+    }
+}
+
+// Get currency by code (cached)
+if (!function_exists('get_currency_by_code')) {
+    function get_currency_by_code($code)
+    {
+        $currencies = Cache::remember('all_currencies_by_code', 86400, function () {
+            return Currency::all()->keyBy('code');
+        });
+        return $currencies->get($code);
+    }
+}
+
+// Get all active languages (cached)
+if (!function_exists('get_all_active_languages')) {
+    function get_all_active_languages()
+    {
+        return Cache::remember('active_languages', 86400, function () {
+            return \App\Models\Language::where('status', 1)->get();
+        });
+    }
+}
+
+// Get language by code (cached)
+if (!function_exists('get_language_by_code')) {
+    function get_language_by_code($code)
+    {
+        $languages = Cache::remember('all_languages_by_code', 86400, function () {
+            return \App\Models\Language::all()->keyBy('code');
+        });
+        return $languages->get($code);
     }
 }
 

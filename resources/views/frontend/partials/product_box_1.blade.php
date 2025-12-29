@@ -6,9 +6,11 @@
         <a href="{{ route('product', $product->slug) }}" class="d-block">
 			@if ($product->thumbnail_img != null)
 			<img
-				class="img-fit mx-auto h-140px h-md-210px"
-				src="{{ uploaded_asset($product->thumbnail_img) }}"
+				class="img-fit mx-auto h-140px h-md-210px lazyload"
+				src="{{ static_asset('assets/img/placeholder.jpg') }}"
+				data-src="{{ uploaded_asset($product->thumbnail_img) }}"
 				alt="{{  $product->getTranslation('name')  }}"
+				loading="lazy"
 				onerror="this.onerror=null;this.src='{{ static_asset('assets/img/placeholder.jpg') }}';"
 			>
 			@else
@@ -22,9 +24,11 @@
 				@endphp
 				@if (!empty($imagethumb))
 					<img
-						class="img-fit mx-auto h-140px h-md-210px"
-						src="{{ uploaded_asset($imagethumb) }}"
+						class="img-fit mx-auto h-140px h-md-210px lazyload"
+						src="{{ static_asset('assets/img/placeholder.jpg') }}"
+						data-src="{{ uploaded_asset($imagethumb) }}"
 						alt="{{  $product->getTranslation('name')  }}"
+						loading="lazy"
 						onerror="this.onerror=null;this.src='{{ static_asset('assets/img/placeholder.jpg') }}';"
 					>
 				@else

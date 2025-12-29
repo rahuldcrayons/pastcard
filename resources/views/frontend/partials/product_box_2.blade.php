@@ -68,7 +68,7 @@ foreach ($product->stocks as $key => $stock) {
 							$thumbnailUrl = $product->thumbnail_img ? uploaded_asset($product->thumbnail_img) : null;
 						@endphp
 						@if ($thumbnailUrl)
-							<img src="{{ $thumbnailUrl }}" class="hover-slider-init" data-options="{&quot;touch&quot;:&quot;end&quot;,&quot;preloadImages&quot;: true }">
+							<img src="{{ static_asset('assets/img/placeholder.jpg') }}" data-src="{{ $thumbnailUrl }}" class="hover-slider-init lazyload" loading="lazy" data-options="{&quot;touch&quot;:&quot;end&quot;,&quot;preloadImages&quot;: true }">
 						@else
 							@php
 								$imagethumb = null;
@@ -85,7 +85,7 @@ foreach ($product->stocks as $key => $stock) {
 								$galleryUrl = $imagethumb ? uploaded_asset($imagethumb) : null;
 							@endphp
 							@if ($galleryUrl)
-								<img src="{{ $galleryUrl }}" class="hover-slider-init" data-options="{&quot;touch&quot;:&quot;end&quot;,&quot;preloadImages&quot;: true }">
+								<img src="{{ static_asset('assets/img/placeholder.jpg') }}" data-src="{{ $galleryUrl }}" class="hover-slider-init lazyload" loading="lazy" data-options="{&quot;touch&quot;:&quot;end&quot;,&quot;preloadImages&quot;: true }">
 							@else
 								<div class="product-image-placeholder" style="width: 100%; padding-top: 100%; background-color: #e0e0e0; border-radius: 4px;"></div>
 							@endif

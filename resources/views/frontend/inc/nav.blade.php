@@ -157,14 +157,15 @@
                            $currency_code = Session::get('currency_code');
                            }
                            else{
-                           $currency_code = \App\Models\Currency::findOrFail(get_setting('system_default_currency'))->code;
+                           $currency_code = get_system_default_currency()->code;
                            }
+                           $currentCurrency = get_currency_by_code($currency_code);
                            @endphp
                            <a href="javascript:void(0)" class="dropdown-toggle text-reset py-2 opacity-60" data-toggle="dropdown" data-display="static">
-                           {{ \App\Models\Currency::where('code', $currency_code)->first()->name }}
+                           {{ $currentCurrency ? $currentCurrency->name : $currency_code }}
                            </a>
                            <ul class="dropdown-menu dropdown-menu-right dropdown-menu-lg-left list-item">
-                              @foreach (\App\Models\Currency::where('status', 1)->get() as $key => $currency)
+                              @foreach (get_all_active_currencies() as $key => $currency)
                               <li class="currency-{{ $currency->name }} switcher-option">
                                  <a class="dropdown-item @if($currency_code == $currency->code) active @endif" href="javascript:void(0)" data-currency="{{ $currency->code }}">{{ $currency->name }} ({{ $currency->symbol }})</a>
                               </li>
@@ -181,13 +182,14 @@
                            else{
                            $locale = 'en';
                            }
+                           $currentLanguage = get_language_by_code($locale);
                            @endphp
                            <a href="javascript:void(0)" class="dropdown-toggle text-reset py-2" data-toggle="dropdown" data-display="static">
-                           <img src="{{ static_asset('assets/img/placeholder.jpg') }}" data-src="{{ static_asset('assets/img/flags/'.$locale.'.png') }}" class="mr-2 lazyload" alt="{{ \App\Models\Language::where('code', $locale)->first()->name }}" height="11">
-                           <span class="opacity-60">{{ \App\Models\Language::where('code', $locale)->first()->name }}</span>
+                           <img src="{{ static_asset('assets/img/placeholder.jpg') }}" data-src="{{ static_asset('assets/img/flags/'.$locale.'.png') }}" class="mr-2 lazyload" alt="{{ $currentLanguage ? $currentLanguage->name : $locale }}" height="11">
+                           <span class="opacity-60">{{ $currentLanguage ? $currentLanguage->name : $locale }}</span>
                            </a>
                            <ul class="dropdown-menu dropdown-menu-left list-item">
-                              @foreach (\App\Models\Language::where('status', 1)->get() as $key => $language)
+                              @foreach (get_all_active_languages() as $key => $language)
                               <li class="switcher-option">
                                  <a href="javascript:void(0)" data-flag="{{ $language->code }}" class="dropdown-item @if($locale == $language) active @endif">
                                  <img src="{{ static_asset('assets/img/placeholder.jpg') }}" data-src="{{ static_asset('assets/img/flags/'.$language->code.'.png') }}" class="mr-1 lazyload" alt="{{ $language->name }}" height="11">
@@ -649,14 +651,15 @@
                         $currency_code = Session::get('currency_code');
                         }
                         else{
-                        $currency_code = \App\Models\Currency::findOrFail(get_setting('system_default_currency'))->code;
+                        $currency_code = get_system_default_currency()->code;
                         }
+                        $currentCurrency = get_currency_by_code($currency_code);
                         @endphp
                         <a href="javascript:void(0)" class="dropdown-toggle text-reset py-2 opacity-60" data-toggle="dropdown" data-display="static">
-                        {{ \App\Models\Currency::where('code', $currency_code)->first()->name }}
+                        {{ $currentCurrency ? $currentCurrency->name : $currency_code }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-right dropdown-menu-lg-left list-item">
-                           @foreach (\App\Models\Currency::where('status', 1)->get() as $key => $currency)
+                           @foreach (get_all_active_currencies() as $key => $currency)
                            <li class="currency-{{ $currency->name }} switcher-option">
                               <a class="dropdown-item @if($currency_code == $currency->code) active @endif" href="javascript:void(0)" data-currency="{{ $currency->code }}">{{ $currency->name }} ({{ $currency->symbol }})</a>
                            </li>
@@ -673,13 +676,14 @@
                         else{
                         $locale = 'en';
                         }
+                        $currentLanguage = get_language_by_code($locale);
                         @endphp
                         <a href="javascript:void(0)" class="dropdown-toggle text-reset py-2" data-toggle="dropdown" data-display="static">
-                        <img src="{{ static_asset('assets/img/flag-placeholder.png') }}" data-src="{{ static_asset('assets/img/flags/'.$locale.'.png') }}" class="mr-2 lazyload" alt="{{ \App\Models\Language::where('code', $locale)->first()->name }}" height="11">
-                        <span class="opacity-60">{{ \App\Models\Language::where('code', $locale)->first()->name }}</span>
+                        <img src="{{ static_asset('assets/img/flag-placeholder.png') }}" data-src="{{ static_asset('assets/img/flags/'.$locale.'.png') }}" class="mr-2 lazyload" alt="{{ $currentLanguage ? $currentLanguage->name : $locale }}" height="11">
+                        <span class="opacity-60">{{ $currentLanguage ? $currentLanguage->name : $locale }}</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-left list-item">
-                           @foreach (\App\Models\Language::where('status', 1)->get() as $key => $language)
+                           @foreach (get_all_active_languages() as $key => $language)
                            <li class="switcher-option">
                               <a href="javascript:void(0)" data-flag="{{ $language->code }}" class="dropdown-item @if($locale == $language) active @endif">
                               <img src="{{ static_asset('assets/img/flag-placeholder.png') }}" data-src="{{ static_asset('assets/img/flags/'.$language->code.'.png') }}" class="mr-1 lazyload" alt="{{ $language->name }}" height="11">
