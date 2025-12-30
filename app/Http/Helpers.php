@@ -784,6 +784,10 @@ if (!function_exists('uploaded_asset')) {
 
         // Handle upload ID
         if (($asset = \App\Models\Upload::find($id)) != null) {
+            // If external_link points to pastcart.com, return placeholder
+            if ($asset->external_link && strpos($asset->external_link, 'pastcart.com') !== false) {
+                return static_asset('assets/img/placeholder.jpg');
+            }
             return $asset->external_link == null ? my_asset($asset->file_name) : $asset->external_link;
         }
         return null;
