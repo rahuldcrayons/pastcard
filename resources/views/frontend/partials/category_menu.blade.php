@@ -5,11 +5,18 @@
             <span class="d-none d-lg-inline-block">{{ translate('See All') }} ></span>
         </a>
     </div>
+    @php
+        $sidebarCategories = Cache::remember('sidebar_root_categories', 3600, function () {
+            return \App\Models\Category::where(function($q) { $q->where('parent_id', 0)->orWhereNull('parent_id'); })->get()->map(function ($category) {
+                $category->total_products = category_product_count($category->id);
+                return $category;
+            })->filter(function ($category) {
+                return $category->total_products > 0;
+            })->sortByDesc('total_products')->take(11);
+        });
+    @endphp
     <ul class="list-unstyled categories no-scrollbar py-2 mb-0 text-left">
-        @foreach (\App\Models\Category::where('level', 0)->orderBy('order_level', 'desc')->get()->take(11) as $key => $category)
-            @php
-                $categoryProductCount = \App\Models\Product::where('category_id', $category->id)->where('published', 1)->count();
-            @endphp
+        @foreach ($sidebarCategories as $key => $category)
             <li class="category-nav-element" data-id="{{ $category->id }}">
                 <a href="{{ route('products.category', $category->slug) }}" class="text-truncate text-reset py-2 px-3 d-block">
                     <img
@@ -20,7 +27,7 @@
                         alt="{{ $category->getTranslation('name') }}"
                         onerror="this.onerror=null;this.src='{{ static_asset('assets/img/placeholder.jpg') }}';"
                     >
-                    <span class="cat-name">{{ $category->getTranslation('name') }} <span class="product-count opacity-60">({{ $categoryProductCount }})</span></span>
+                    <span class="cat-name">{{ $category->getTranslation('name') }} <span class="product-count opacity-60">({{ $category->total_products }})</span></span>
                 </a>
                 @if(count(\App\Utility\CategoryUtility::get_immediate_children_ids($category->id))>0)
                     <div class="sub-cat-menu c-scrollbar-light rounded shadow-lg p-4">

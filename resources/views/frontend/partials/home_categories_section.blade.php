@@ -1,7 +1,14 @@
-@if(get_setting('home_categories') != null) 
-    @php $home_categories = json_decode(get_setting('home_categories')); @endphp
+@if(get_setting('home_categories') != null)
+    @php
+        $home_categories = json_decode(get_setting('home_categories'));
+        // Eager load all home categories at once to avoid N+1
+        $categories_map = Cache::remember('home_categories_map', 3600, function () use ($home_categories) {
+            return \App\Models\Category::whereIn('id', $home_categories)->get()->keyBy('id');
+        });
+    @endphp
     @foreach ($home_categories as $key => $value)
-        @php $category = \App\Models\Category::find($value); @endphp
+        @php $category = $categories_map->get($value); @endphp
+        @if($category)
         <section class="mb-4">
             <div class="container">
                 <div class="px-2 py-4 px-md-4 py-md-3 bg-white shadow-sm rounded">
@@ -21,6 +28,7 @@
                 </div>
             </div>
         </section>
+        @endif
     @endforeach
 @endif
 

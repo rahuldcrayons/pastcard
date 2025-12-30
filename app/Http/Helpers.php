@@ -118,14 +118,15 @@ if (!function_exists('filter_products')) {
     }
 }
 
-//cache products based on category (including all descendant categories)
+//cache products based on category using HYBRID approach:
+// - Products WITH pivot entries: use pivot table
+// - Products WITHOUT pivot entries: use category_id column
 if (!function_exists('get_cached_products')) {
     function get_cached_products($category_id = null)
     {
         if ($category_id != null) {
             return Cache::remember('products-category-v2-' . $category_id, 3600, function () use ($category_id) {
-                // Include the selected category and all its children so parent blocks (e.g. ANTIQUE MAGAZINES)
-                // also show products assigned to child categories.
+                // Include the selected category and all its children
                 $categoryIds = [$category_id];
                 try {
                     $children = CategoryUtility::children_ids($category_id, false);
@@ -133,10 +134,28 @@ if (!function_exists('get_cached_products')) {
                         $categoryIds = array_merge($categoryIds, $children);
                     }
                 } catch (\Throwable $e) {
-                    // Fallback gracefully if anything goes wrong; just use the given category id.
+                    // Fallback gracefully
                 }
 
-                return Product::with('stocks')->whereIn('category_id', $categoryIds)
+                // HYBRID: Get products from pivot table
+                $pivotProductIds = \DB::table('category_product')
+                    ->whereIn('category_id', $categoryIds)
+                    ->pluck('product_id')
+                    ->unique()
+                    ->toArray();
+
+                // HYBRID: Also get products without pivot entries (using category_id)
+                $directProductIds = \DB::table('products')
+                    ->leftJoin('category_product', 'products.id', '=', 'category_product.product_id')
+                    ->where('products.published', 1)
+                    ->whereNull('category_product.product_id')
+                    ->whereIn('products.category_id', $categoryIds)
+                    ->pluck('products.id')
+                    ->toArray();
+
+                $allProductIds = array_unique(array_merge($pivotProductIds, $directProductIds));
+
+                return Product::with('stocks')->whereIn('id', $allProductIds)
                     ->where('published', 1)
                     ->where('unit_price', '>', 0)
                     ->orderBy('id', 'desc')
@@ -155,15 +174,80 @@ if (!function_exists('get_cached_products')) {
     }
 }
 
-//cache product counts per category to avoid N+1 count queries in navigation
+//cache product counts per category using HYBRID approach:
+// - Products WITH pivot entries: use pivot table (original WordPress assignments)
+// - Products WITHOUT pivot entries: use category_id column (newer products)
 if (!function_exists('category_product_counts')) {
     function category_product_counts()
     {
         return Cache::remember('category_product_counts', 600, function () {
-            return Product::where('published', 1)
-                ->select('category_id', \DB::raw('COUNT(*) as aggregate'))
-                ->groupBy('category_id')
-                ->pluck('aggregate', 'category_id');
+            // 1. Counts from pivot table (original WordPress data)
+            $pivotCounts = \DB::table('category_product')
+                ->join('products', 'category_product.product_id', '=', 'products.id')
+                ->where('products.published', 1)
+                ->select('category_product.category_id', \DB::raw('COUNT(DISTINCT category_product.product_id) as aggregate'))
+                ->groupBy('category_product.category_id')
+                ->pluck('aggregate', 'category_id')
+                ->toArray();
+
+            // 2. Counts for products WITHOUT pivot entries (use category_id)
+            $directCounts = \DB::table('products')
+                ->leftJoin('category_product', 'products.id', '=', 'category_product.product_id')
+                ->where('products.published', 1)
+                ->whereNull('category_product.product_id')
+                ->select('products.category_id', \DB::raw('COUNT(*) as aggregate'))
+                ->groupBy('products.category_id')
+                ->pluck('aggregate', 'category_id')
+                ->toArray();
+
+            // 3. Merge counts (pivot takes precedence, add non-pivot counts)
+            $merged = $pivotCounts;
+            foreach ($directCounts as $catId => $count) {
+                if (isset($merged[$catId])) {
+                    $merged[$catId] += $count;
+                } else {
+                    $merged[$catId] = $count;
+                }
+            }
+
+            return collect($merged);
+        });
+    }
+}
+
+// Get product counts including all child/sub-child categories
+if (!function_exists('category_with_children_product_counts')) {
+    function category_with_children_product_counts()
+    {
+        return Cache::remember('category_with_children_product_counts', 600, function () {
+            // Get direct counts per category
+            $directCounts = category_product_counts();
+
+            // Get all categories with their parent relationships
+            $categories = \App\Models\Category::select('id', 'parent_id')->get();
+
+            // Build a map of category_id => array of all descendant IDs
+            $childrenMap = [];
+            foreach ($categories as $cat) {
+                $childrenMap[$cat->id] = CategoryUtility::children_ids($cat->id);
+            }
+
+            // Calculate total counts (self + all descendants)
+            $totalCounts = [];
+            foreach ($categories as $cat) {
+                $total = isset($directCounts[$cat->id]) ? $directCounts[$cat->id] : 0;
+
+                // Add counts from all child categories
+                foreach ($childrenMap[$cat->id] as $childId) {
+                    if (isset($directCounts[$childId])) {
+                        $total += $directCounts[$childId];
+                    }
+                }
+
+                $totalCounts[$cat->id] = $total;
+            }
+
+            return collect($totalCounts);
         });
     }
 }
@@ -171,7 +255,8 @@ if (!function_exists('category_product_counts')) {
 if (!function_exists('category_product_count')) {
     function category_product_count($category_id)
     {
-        $counts = category_product_counts();
+        // Use counts that include child categories
+        $counts = category_with_children_product_counts();
         return isset($counts[$category_id]) ? $counts[$category_id] : 0;
     }
 }
@@ -691,17 +776,10 @@ if (!function_exists('uploaded_asset')) {
         }
 
         // Handle WordPress URL format: "url ! alt : ... | url2"
-        // Extract just the first URL if it's a WordPress image string
+        // For any URL strings, return placeholder - don't try to load external images
         if (is_string($id) && strpos($id, 'http') === 0) {
-            // Extract just the URL part (before any metadata or pipe)
-            $url = $id;
-            if (strpos($url, ' !') !== false) {
-                $url = trim(explode(' !', $url)[0]);
-            }
-            if (strpos($url, '|') !== false) {
-                $url = trim(explode('|', $url)[0]);
-            }
-            return $url;
+            // Return placeholder for all URL-based images
+            return static_asset('assets/img/placeholder.jpg');
         }
 
         // Handle upload ID

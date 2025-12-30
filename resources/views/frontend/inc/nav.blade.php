@@ -53,7 +53,7 @@
                   <ul id="menu-sidebar-menu" class="menu departments-menu collapse" style="">
                      @php
                      $offcanvasRootCategories = Cache::remember('popular_root_categories', 3600, function () {
-                         return \App\Models\Category::where('level', 0)->get()->map(function ($category) {
+                         return \App\Models\Category::where(function($q) { $q->where('parent_id', 0)->orWhereNull('parent_id'); })->get()->map(function ($category) {
                              $category->product_count = category_product_count($category->id);
                              return $category;
                          })->filter(function ($category) {
@@ -251,7 +251,7 @@
                                           <option value="">All Categories</option>
                                           @php
                                           $searchCategories = Cache::remember('search_dropdown_categories', 3600, function () {
-                                              return \App\Models\Category::where('level', 0)->orderBy('order_level', 'desc')->with('childrenCategories')->get();
+                                              return \App\Models\Category::where(function($q) { $q->where('parent_id', 0)->orWhereNull('parent_id'); })->orderBy('order_level', 'desc')->with('childrenCategories')->get();
                                           });
                                           @endphp
                                           @foreach ($searchCategories as $key => $category)
@@ -340,7 +340,7 @@
                                        </li>
                                        @php
                                            $headerRootCategories = Cache::remember('popular_root_categories', 3600, function () {
-                                               return \App\Models\Category::where('level', 0)->get()->map(function ($category) {
+                                               return \App\Models\Category::where(function($q) { $q->where('parent_id', 0)->orWhereNull('parent_id'); })->get()->map(function ($category) {
                                                    $category->product_count = category_product_count($category->id);
                                                    return $category;
                                                })->filter(function ($category) {
@@ -608,24 +608,225 @@
                         <nav class="sm_megamenu_wrapper_horizontal_menu sambar" id="sm_megamenu_menu631d965feeaca">
                            <div class="sambar-inner">
                               <div class="mega-content">
-                                 <ul class="horizontal-type  sm_megamenu_menu sm_megamenu_menu_black">
+                                 <ul class="horizontal-type sm_megamenu_menu sm_megamenu_menu_black">
+                                    {{-- HOME --}}
+                                    <li class="home-item other-toggle sm_megamenu_lv1 sm_megamenu_drop">
+                                       <a class="sm_megamenu_head sm_megamenu_drop" href="{{ route('home') }}">
+                                          <span class="sm_megamenu_icon sm_megamenu_nodesc">
+                                             <span class="sm_megamenu_title">HOME</span>
+                                          </span>
+                                       </a>
+                                    </li>
+
+                                    {{-- ARTWORKS with submenu --}}
                                     @php
-                                       $headerMenuLabels = json_decode(get_setting('header_menu_labels'), true) ?: [];
-                                       $headerMenuLinks  = json_decode(get_setting('header_menu_links'), true) ?: [];
+                                       $artworksCategory = \App\Models\Category::where('id', 3886)->first();
+                                       $artworksChildren = $artworksCategory ? \App\Models\Category::where('parent_id', 3886)->get() : collect();
+                                       // Also include Old Paintings from ANTIQUE PAINTINGS
+                                       $oldPaintings = \App\Models\Category::where('id', 468)->first();
+                                       $artwork = \App\Models\Category::where('id', 469)->first();
                                     @endphp
-                                    @foreach ($headerMenuLabels as $key => $value)
-                                        @php
-                                            $rawLink = $headerMenuLinks[$key] ?? '#';
-                                            $safeLink = localize_internal_url($rawLink);
-                                        @endphp
-                                        <li class="{{ translate($value) }}-item other-toggle sm_megamenu_lv1 sm_megamenu_drop">
-                                           <a class="sm_megamenu_head sm_megamenu_drop" href="{{ $safeLink }}">
-                                           <span class="sm_megamenu_icon sm_megamenu_nodesc">
-                                           <span class="sm_megamenu_title">{{ translate($value) }}</span>
-                                           </span>
-                                           </a>
-                                        </li>
-                                    @endforeach
+                                    <li class="artworks-item other-toggle sm_megamenu_lv1 sm_megamenu_drop parent-item">
+                                       <a class="sm_megamenu_head sm_megamenu_drop sm_megamenu_haschild" href="{{ $artworksCategory ? route('products.category', $artworksCategory->slug) : '#' }}">
+                                          <span class="sm_megamenu_icon sm_megamenu_nodesc">
+                                             <span class="sm_megamenu_title">ARTWORKS</span>
+                                          </span>
+                                       </a>
+                                       <div class="sm-megamenu-child sm_megamenu_dropdown_2columns">
+                                          <div class="sm_megamenu_col_2 sm_megamenu_firstcolumn">
+                                             <div class="sm_megamenu_head_item">
+                                                <div class="sm_megamenu_title">
+                                                   @if($artwork)
+                                                   <a class="sm_megamenu_nodrop" href="{{ route('products.category', $artwork->slug) }}">
+                                                      <span class="sm_megamenu_title_lv-2">ARTWORK</span>
+                                                   </a>
+                                                   @endif
+                                                   @foreach($artworksChildren as $child)
+                                                   <a class="sm_megamenu_nodrop" href="{{ route('products.category', $child->slug) }}">
+                                                      <span class="sm_megamenu_title_lv-2">{{ strtoupper($child->name) }}</span>
+                                                   </a>
+                                                   @endforeach
+                                                   @if($oldPaintings)
+                                                   <a class="sm_megamenu_nodrop" href="{{ route('products.category', $oldPaintings->slug) }}">
+                                                      <span class="sm_megamenu_title_lv-2">OLD PAINTINGS</span>
+                                                   </a>
+                                                   @endif
+                                                </div>
+                                             </div>
+                                          </div>
+                                       </div>
+                                    </li>
+
+                                    {{-- PHILATELY --}}
+                                    @php $philatelyCategory = \App\Models\Category::where('id', 170)->first(); @endphp
+                                    <li class="philately-item other-toggle sm_megamenu_lv1 sm_megamenu_drop">
+                                       <a class="sm_megamenu_head sm_megamenu_drop" href="{{ $philatelyCategory ? route('products.category', $philatelyCategory->slug) : '#' }}">
+                                          <span class="sm_megamenu_icon sm_megamenu_nodesc">
+                                             <span class="sm_megamenu_title">PHILATELY</span>
+                                          </span>
+                                       </a>
+                                    </li>
+
+                                    {{-- ANTIQUE COMICS with submenu --}}
+                                    @php
+                                       $comicsCategory = \App\Models\Category::where('id', 174)->first();
+                                       $comicsChildren = Cache::remember('nav_comics_children', 3600, function() {
+                                          return \App\Models\Category::where('parent_id', 174)->get()->map(function($cat) {
+                                             $cat->product_count = category_product_count($cat->id);
+                                             return $cat;
+                                          })->filter(function($cat) {
+                                             return $cat->product_count > 0;
+                                          })->sortByDesc('product_count');
+                                       });
+                                    @endphp
+                                    <li class="comics-item other-toggle sm_megamenu_lv1 sm_megamenu_drop parent-item">
+                                       <a class="sm_megamenu_head sm_megamenu_drop sm_megamenu_haschild" href="{{ $comicsCategory ? route('products.category', $comicsCategory->slug) : '#' }}">
+                                          <span class="sm_megamenu_icon sm_megamenu_nodesc">
+                                             <span class="sm_megamenu_title">ANTIQUE COMICS</span>
+                                          </span>
+                                       </a>
+                                       <div class="sm-megamenu-child sm_megamenu_dropdown_4columns">
+                                          <div class="sm_megamenu_col_4 sm_megamenu_firstcolumn">
+                                             <div class="sm_megamenu_col_3">
+                                                <div class="sm_megamenu_head_item">
+                                                   <div class="sm_megamenu_title">
+                                                      @foreach($comicsChildren->chunk(ceil($comicsChildren->count() / 2)) as $chunk)
+                                                      <div class="sm_megamenu_col_6 sm_megamenu_firstcolumn">
+                                                         <div class="sm_megamenu_head_item">
+                                                            <div class="sm_megamenu_title">
+                                                               @foreach($chunk as $child)
+                                                               <a class="sm_megamenu_nodrop" href="{{ route('products.category', $child->slug) }}">
+                                                                  <span class="sm_megamenu_title_lv-2"><strong>{{ strtoupper($child->name) }}</strong> <span class="product-count">({{ $child->product_count }})</span></span>
+                                                               </a>
+                                                               @endforeach
+                                                            </div>
+                                                         </div>
+                                                      </div>
+                                                      @endforeach
+                                                   </div>
+                                                </div>
+                                             </div>
+                                          </div>
+                                       </div>
+                                    </li>
+
+                                    {{-- ANTIQUE MAGAZINES with submenu --}}
+                                    @php
+                                       $magazinesCategory = \App\Models\Category::where('id', 167)->first();
+                                       $magazinesChildren = Cache::remember('nav_magazines_children', 3600, function() {
+                                          return \App\Models\Category::where('parent_id', 167)->get()->map(function($cat) {
+                                             $cat->product_count = category_product_count($cat->id);
+                                             return $cat;
+                                          })->filter(function($cat) {
+                                             return $cat->product_count > 0;
+                                          })->sortByDesc('product_count');
+                                       });
+                                    @endphp
+                                    <li class="magazines-item other-toggle sm_megamenu_lv1 sm_megamenu_drop parent-item">
+                                       <a class="sm_megamenu_head sm_megamenu_drop sm_megamenu_haschild" href="{{ $magazinesCategory ? route('products.category', $magazinesCategory->slug) : '#' }}">
+                                          <span class="sm_megamenu_icon sm_megamenu_nodesc">
+                                             <span class="sm_megamenu_title">ANTIQUE MAGAZINES</span>
+                                          </span>
+                                       </a>
+                                       <div class="sm-megamenu-child sm_megamenu_dropdown_4columns">
+                                          <div class="sm_megamenu_col_4 sm_megamenu_firstcolumn">
+                                             <div class="sm_megamenu_col_3">
+                                                <div class="sm_megamenu_head_item">
+                                                   <div class="sm_megamenu_title">
+                                                      @foreach($magazinesChildren->chunk(ceil($magazinesChildren->count() / 2)) as $chunk)
+                                                      <div class="sm_megamenu_col_6 sm_megamenu_firstcolumn">
+                                                         <div class="sm_megamenu_head_item">
+                                                            <div class="sm_megamenu_title">
+                                                               @foreach($chunk as $child)
+                                                               <a class="sm_megamenu_nodrop" href="{{ route('products.category', $child->slug) }}">
+                                                                  <span class="sm_megamenu_title_lv-2"><strong>{{ strtoupper($child->name) }}</strong> <span class="product-count">({{ $child->product_count }})</span></span>
+                                                               </a>
+                                                               @endforeach
+                                                            </div>
+                                                         </div>
+                                                      </div>
+                                                      @endforeach
+                                                   </div>
+                                                </div>
+                                             </div>
+                                          </div>
+                                       </div>
+                                    </li>
+
+                                    {{-- NOVELS --}}
+                                    @php $novelsCategory = \App\Models\Category::where('id', 172)->first(); @endphp
+                                    <li class="novels-item other-toggle sm_megamenu_lv1 sm_megamenu_drop">
+                                       <a class="sm_megamenu_head sm_megamenu_drop" href="{{ $novelsCategory ? route('products.category', $novelsCategory->slug) : '#' }}">
+                                          <span class="sm_megamenu_icon sm_megamenu_nodesc">
+                                             <span class="sm_megamenu_title">NOVELS</span>
+                                          </span>
+                                       </a>
+                                    </li>
+
+                                    {{-- RARE ITEMS --}}
+                                    @php $rareItemsCategory = \App\Models\Category::where('id', 178)->first(); @endphp
+                                    <li class="rareitems-item other-toggle sm_megamenu_lv1 sm_megamenu_drop">
+                                       <a class="sm_megamenu_head sm_megamenu_drop" href="{{ $rareItemsCategory ? route('products.category', $rareItemsCategory->slug) : '#' }}">
+                                          <span class="sm_megamenu_icon sm_megamenu_nodesc">
+                                             <span class="sm_megamenu_title">RARE ITEMS</span>
+                                          </span>
+                                       </a>
+                                    </li>
+
+                                    {{-- MORE dropdown for additional categories --}}
+                                    @php
+                                       $cassettesCategory = \App\Models\Category::where('id', 179)->first();
+                                       $sportsCategory = \App\Models\Category::where('id', 3884)->first();
+                                       $paintingsCategory = \App\Models\Category::where('id', 168)->first();
+                                       $dealCategory = \App\Models\Category::where('id', 414)->first();
+                                       $store50Category = \App\Models\Category::where('id', 413)->first();
+                                       $clearanceCategory = \App\Models\Category::where('id', 415)->first();
+                                    @endphp
+                                    <li class="more-item other-toggle sm_megamenu_lv1 sm_megamenu_drop parent-item">
+                                       <a class="sm_megamenu_head sm_megamenu_drop sm_megamenu_haschild" href="#">
+                                          <span class="sm_megamenu_icon sm_megamenu_nodesc">
+                                             <span class="sm_megamenu_title">More</span>
+                                          </span>
+                                       </a>
+                                       <div class="sm-megamenu-child sm_megamenu_dropdown_2columns">
+                                          <div class="sm_megamenu_col_2 sm_megamenu_firstcolumn">
+                                             <div class="sm_megamenu_head_item">
+                                                <div class="sm_megamenu_title">
+                                                   @if($cassettesCategory)
+                                                   <a class="sm_megamenu_nodrop" href="{{ route('products.category', $cassettesCategory->slug) }}">
+                                                      <span class="sm_megamenu_title_lv-2">CASSETTES / VINYL</span>
+                                                   </a>
+                                                   @endif
+                                                   @if($sportsCategory)
+                                                   <a class="sm_megamenu_nodrop" href="{{ route('products.category', $sportsCategory->slug) }}">
+                                                      <span class="sm_megamenu_title_lv-2">SPORTS COLLECTIBLES</span>
+                                                   </a>
+                                                   @endif
+                                                   @if($paintingsCategory)
+                                                   <a class="sm_megamenu_nodrop" href="{{ route('products.category', $paintingsCategory->slug) }}">
+                                                      <span class="sm_megamenu_title_lv-2">ANTIQUE PAINTINGS</span>
+                                                   </a>
+                                                   @endif
+                                                   @if($store50Category)
+                                                   <a class="sm_megamenu_nodrop" href="{{ route('products.category', $store50Category->slug) }}">
+                                                      <span class="sm_megamenu_title_lv-2">THE ₹50 STORE</span>
+                                                   </a>
+                                                   @endif
+                                                   @if($dealCategory)
+                                                   <a class="sm_megamenu_nodrop" href="{{ route('products.category', $dealCategory->slug) }}">
+                                                      <span class="sm_megamenu_title_lv-2">DEAL OF THE DAY</span>
+                                                   </a>
+                                                   @endif
+                                                   @if($clearanceCategory)
+                                                   <a class="sm_megamenu_nodrop" href="{{ route('products.category', $clearanceCategory->slug) }}">
+                                                      <span class="sm_megamenu_title_lv-2">STOCK CLEARANCE SALE</span>
+                                                   </a>
+                                                   @endif
+                                                </div>
+                                             </div>
+                                          </div>
+                                       </div>
+                                    </li>
                                  </ul>
                               </div>
                            </div>
