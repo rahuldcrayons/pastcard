@@ -175,3 +175,197 @@ Preloader Area Style
     color: #aaa;
     font-weight: normal;
 }
+
+/* ============================================
+   MOBILE RESPONSIVE FIXES
+   ============================================ */
+
+/* Fix horizontal scroll on all pages */
+html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+}
+
+.container, .container-fluid {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* Category page - prevent horizontal scroll */
+.category-page-content,
+.category-products,
+.products-grid,
+.product-listing {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* Mobile: Show 1 product tile per row on small screens */
+@media (max-width: 480px) {
+    /* Product grid - single column on mobile */
+    .products-grid .col-6,
+    .products-grid .col-sm-6,
+    .products-grid .col-md-4,
+    .products-grid .col-lg-3,
+    .product-listing .col-6,
+    .product-listing .col-sm-6 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
+    /* Fix product cards on mobile */
+    .product-card {
+        width: 100%;
+        margin: 0 auto 15px;
+    }
+
+    .product-card img {
+        max-height: 300px;
+        min-height: 200px;
+    }
+
+    /* Fix category page grid */
+    .category-products .col-6,
+    .category-products .col-sm-6,
+    .category-products [class*="col-"] {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Hide sidebar on mobile category page */
+    .category-sidebar,
+    .sidebar-filter {
+        display: none;
+    }
+
+    /* Header mobile fixes */
+    .header-mobile .header-wrapper {
+        padding: 5px 10px;
+    }
+
+    .header-mobile .logo img {
+        max-width: 120px;
+        height: auto;
+    }
+
+    /* Search bar fix */
+    .search-container {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .search-wrapper {
+        width: 100%;
+    }
+
+    /* Fix horizontal menu overflow */
+    .horizontal-menu,
+    .horizontal-block {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .horizontal-type.sm_megamenu_menu {
+        white-space: nowrap;
+        flex-wrap: nowrap;
+    }
+
+    /* Fix breadcrumb overflow */
+    .breadcrumb {
+        flex-wrap: wrap;
+        overflow: hidden;
+    }
+}
+
+/* Tablet: 2 products per row */
+@media (min-width: 481px) and (max-width: 768px) {
+    .products-grid .col-6,
+    .products-grid .col-sm-6,
+    .category-products .col-6,
+    .category-products .col-sm-6 {
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+    }
+
+    .product-card img {
+        max-height: 220px;
+        min-height: 180px;
+    }
+}
+
+/* Header responsiveness improvements */
+@media (max-width: 991px) {
+    .header-middle .middle-content {
+        flex-wrap: wrap;
+    }
+
+    .logo-container {
+        flex: 0 0 100%;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    .right-container {
+        flex: 0 0 100%;
+        justify-content: space-between;
+    }
+
+    .hotline-header {
+        font-size: 12px;
+    }
+
+    /* Fix dropdown menus */
+    .dropdown-menu {
+        max-width: 100vw;
+        overflow-x: hidden;
+    }
+}
+
+/* Very small screens */
+@media (max-width: 360px) {
+    .header-mobile .column.center {
+        flex: 1;
+    }
+
+    .header-mobile .logo img {
+        max-width: 100px;
+    }
+
+    .customer-action .head-title {
+        font-size: 11px;
+    }
+
+    /* Fix header buttons */
+    .header-addons-icon {
+        font-size: 18px;
+    }
+}
+
+/* Fix row overflow issues */
+.row {
+    margin-left: 0;
+    margin-right: 0;
+    max-width: 100%;
+}
+
+/* Ensure images don't cause overflow */
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Fix mega menu overflow on mobile */
+@media (max-width: 768px) {
+    .sm-megamenu-child,
+    .sm_megamenu_dropdown_4columns,
+    .sm_megamenu_dropdown_2columns {
+        max-width: 100vw;
+        overflow-x: hidden;
+    }
+
+    .vertical-menu-content {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+}

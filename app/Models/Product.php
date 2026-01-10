@@ -32,6 +32,26 @@ class Product extends Model
         return $this->belongsTo(Category::class);
     }
 
+    /**
+     * Get all categories for the product (many-to-many relationship)
+     */
+    public function categories()
+    {
+        return $this->belongsToMany(Category::class, 'category_product')
+                    ->withPivot('is_primary')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Get the primary category from the pivot table
+     */
+    public function primaryCategory()
+    {
+        return $this->belongsToMany(Category::class, 'category_product')
+                    ->wherePivot('is_primary', true)
+                    ->first();
+    }
+
     public function brand()
     {
         return $this->belongsTo(Brand::class);

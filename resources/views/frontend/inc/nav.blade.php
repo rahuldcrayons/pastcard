@@ -45,7 +45,7 @@
          <div class="offcanvas-menu-container klb-menu" style="height: 1018px; transition-duration: 350ms;">
             <div class="offcanvas-menu-wrapper klb-menu-wrapper" style="transition-duration: 350ms;">
                <nav class="site-menu vertical categories">
-                  <a href="#" class="all-categories">
+                  <a href="{{ route('categories.all') }}" class="all-categories">
                      <div class="departments-icon"><i class="klbth-icon-menu"></i></div>
                      <div class="departments-text">All Categories</div>
                      <div class="departments-arrow"><i class="klbth-icon-nav-arrow-down"></i></div>
@@ -332,7 +332,7 @@
                                  <div class="mega-content">
                                     <ul class="vertical-type sm-megamenu-hover sm_megamenu_menu sm_megamenu_menu_black">
                                        <li class="other-toggle sm_megamenu_lv1 sm_megamenu_drop parent">
-                                          <a class="sm_megamenu_head sm_megamenu_drop" href="javascript:void(0)" id="sm_megamenu_0">
+                                          <a class="sm_megamenu_head sm_megamenu_drop" href="{{ route('categories.all') }}" id="sm_megamenu_0">
                                           <span class="sm_megamenu_icon sm_megamenu_nodesc">
                                           <span class="sm_megamenu_title">All Categories</span>
                                           </span>
